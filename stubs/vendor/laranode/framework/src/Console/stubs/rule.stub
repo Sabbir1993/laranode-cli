@@ -1,0 +1,24 @@
+class DummyRule {
+    /**
+     * Determine if the validation rule passes.
+     *
+     * @param  {string}  attribute
+     * @param  {any}  value
+     * @return {boolean}
+     */
+    passes(attribute, value) {
+        // Build your validation logic here
+        return String(value) === String(value).toUpperCase();
+    }
+
+    /**
+     * Get the validation error message.
+     *
+     * @return {string}
+     */
+    message() {
+        return 'The :attribute is invalid.';
+    }
+}
+
+module.exports = DummyRule;

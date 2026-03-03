@@ -1,0 +1,21 @@
+const Command = use('laranode/Console/Command');
+
+class {{ class }} extends Command {
+    constructor(app) {
+        super();
+        this.app = app;
+        // The name and signature of the console command.
+        this.signature = 'command:name';
+        // The console command description.
+        this.description = 'Command description';
+    }
+
+    /**
+     * Execute the console command.
+     */
+    async handle(args, options) {
+        this.info('Command executed successfully!');
+    }
+}
+
+module.exports = {{ class }};

@@ -1,0 +1,14 @@
+const Seeder = use('laranode/Database/Seeders/Seeder');
+
+class {{ class }} extends Seeder {
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    async run() {
+        // DB.table('users').insert({ ... })
+    }
+}
+
+module.exports = {{ class }};

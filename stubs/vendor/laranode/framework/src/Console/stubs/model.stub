@@ -1,0 +1,27 @@
+const Model = use('laranode/Database/Loquent/Model');
+
+class {{ class }} extends Model {
+    
+    /**
+     * The table associated with the model.
+     * Default: plural snake_case of class name
+     */
+    // table = '{{ class_plural_snake }}';
+
+    /**
+     * The primary key associated with the table.
+     */
+    // primaryKey = 'id';
+
+    /**
+     * The attributes that are mass assignable.
+     */
+    // fillable = [];
+
+    /**
+     * The attributes that should be hidden for arrays/JSON.
+     */
+    // hidden = [];
+}
+
+module.exports = {{ class }};

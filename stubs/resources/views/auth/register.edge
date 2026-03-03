@@ -1,0 +1,95 @@
+@extends('layouts.todo')
+
+@section('content')
+<div class="card" style="max-width: 450px; margin: 0 auto;">
+    <h1>Create Account</h1>
+    <form id="registerForm">
+        <input type="hidden" id="csrfToken" name="_token" value="">
+        <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name" required placeholder="John Doe">
+        </div>
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required placeholder="name@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required placeholder="Min 6 characters">
+        </div>
+        <div class="form-group">
+            <label for="password_confirmation">Confirm Password</label>
+            <input type="password" id="password_confirmation" name="password_confirmation" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+        
+        <div id="errorMessage" style="color: var(--primary); margin-top: 1rem; text-align: center; font-size: 0.875rem; display: none;"></div>
+    </form>
+    
+    <div class="auth-links">
+        Already have an account? <a href="/login">Login</a>
+    </div>
+</div>
+
+<script>
+// Get CSRF token from cookie
+function getCsrfToken() {
+    const name = 'XSRF-TOKEN=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for(let i = 0; i <ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return '';
+}
+
+// Set CSRF token on page load
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('csrfToken').value = getCsrfToken();
+});
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('errorMessage');
+    errorDiv.style.display = 'none';
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    try {
+        const response = await fetch('/register', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Accept': 'application/json',
+                'X-XSRF-TOKEN': getCsrfToken()
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            // Success! Store token and redirect
+            document.cookie = `token=${result.token}; path=/; max-age=86400; SameSite=Strict`;
+            window.location.href = '/todos';
+        } else {
+            const errorText = result.errors 
+                ? Object.values(result.errors).flat().join(', ') 
+                : (result.message || 'Registration failed');
+            errorDiv.textContent = errorText;
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Connection error. Please try again.';
+        errorDiv.style.display = 'block';
+    }
+});
+</script>
+@endsection

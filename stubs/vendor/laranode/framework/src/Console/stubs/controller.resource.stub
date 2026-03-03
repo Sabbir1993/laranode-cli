@@ -1,0 +1,54 @@
+const Controller = use('App/Http/Controllers/Controller');
+
+class {{ class }} extends Controller {
+    /**
+     * Display a listing of the resource.
+     */
+    async index(req, res) {
+        //
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    async create(req, res) {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    async store(req, res) {
+        //
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    async show(req, res) {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    async edit(req, res) {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    async update(req, res) {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    async destroy(req, res) {
+        //
+    }
+}
+
+module.exports = {{ class }};

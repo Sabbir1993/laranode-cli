@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaraNode Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #F05340;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --sidebar-width: 280px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+        aside {
+            width: var(--sidebar-width);
+            background: rgba(15, 23, 42, 0.95);
+            border-right: 1px solid var(--glass-border);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 2rem; }
+        .logo span { color: var(--primary); }
+        nav h3 { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin: 1.5rem 0 0.5rem; letter-spacing: 1px; }
+        nav ul { list-style: none; }
+        nav a { display: block; padding: 0.5rem 0; color: #cbd5e1; text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+        nav a:hover { color: var(--primary); }
+        nav a.active { color: var(--primary); font-weight: 600; }
+
+        main { flex: 1; padding: 4rem 6rem; max-width: 1000px; margin: 0 auto; }
+        section { margin-bottom: 6rem; scroll-margin-top: 4rem; }
+        h1 { font-size: 3rem; margin-bottom: 1.5rem; font-weight: 800; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem; }
+        h2 { font-size: 2rem; margin: 3rem 0 1rem; color: var(--primary); font-weight: 700; }
+        h3 { font-size: 1.25rem; margin: 2rem 0 1rem; color: #fff; }
+        p { margin-bottom: 1.5rem; color: #cbd5e1; font-size: 1.1rem; }
+        pre {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            border: 1px solid var(--glass-border);
+        }
+        code { font-family: 'Fira Code', monospace; font-size: 0.9rem; color: #e2e8f0; }
+        .highlight { color: var(--primary); font-weight: 600; }
+
+        .feature-card h4 { margin-bottom: 0.5rem; color: #fff; }
+        .feature-card p { font-size: 0.95rem; margin-bottom: 0; }
+
+        .rule-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            scroll-margin-top: 5rem;
+        }
+        .rule-card h4 {
+            color: var(--primary);
+            font-family: 'Fira Code', monospace;
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        .rule-card h4::before {
+            content: '#';
+            margin-right: 0.5rem;
+            opacity: 0.5;
+        }
+        .rule-card .meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 1000px) {
+            aside { display: none; }
+            main { padding: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <aside>
+        <div class="logo">Lara<span>Node</span></div>
+        <nav>
+            <h3>Getting Started</h3>
+            <ul>
+                <li><a href="#introduction">Introduction</a></li>
+                <li><a href="#installation">Installation</a></li>
+            </ul>
+            <h3>Basics</h3>
+            <ul>
+                <li><a href="#routing">Routing</a></li>
+                <li><a href="#controllers">Controllers</a></li>
+                <li><a href="#middleware">Middleware</a></li>
+                <li><a href="#validation">The Validation Engine</a></li>
+            </ul>
+            <h3>Database</h3>
+            <ul>
+                <li><a href="#loquent">Loquent ORM</a></li>
+                <li><a href="#query-builder">Query Builder</a></li>
+                <li><a href="#migrations">Migrations & Schema</a></li>
+            </ul>
+            <h3>The Frontend</h3>
+            <ul>
+                <li><a href="#templating">Edge Templating</a></li>
+                <li><a href="#localization">Localization</a></li>
+            </ul>
+            <h3>Security</h3>
+            <ul>
+                <li><a href="#authentication">Authentication</a></li>
+                <li><a href="#security">CSRF & CORS</a></li>
+            </ul>
+            <h3>Advanced</h3>
+            <ul>
+                <li><a href="#artisan">Artisan CLI</a></li>
+                <li><a href="#process">The Lifecycle</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main>
+        <!-- GETTING STARTED -->
+        <section id="introduction">
+            <h1>Introduction</h1>
+            <p>Welcome to the official <span class="highlight">LaraNode</span> documentation. LaraNode is a Node.js framework crafted for developers who love the elegance of Laravel but want the speed and ecosystem of JavaScript.</p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🏛️ Expressive Architecture</h4>
+                    <p>Designed to be a 1:1 mirror of Laravel's file structure and patterns.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🧩 Dependency Injection</h4>
+                    <p>Powerful Service Container at the heart of the framework.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="installation">
+            <h2>Installation</h2>
+            <p>Get started by creating your first LaraNode project using our CLI.</p>
+            <pre><code># Install laranode-cli globally
+npm install -g laranode-cli
+
+# Create a new project
+laranode new my-app</code></pre>
+            <p>Alternatively, clone the skeleton directly:</p>
+            <pre><code>git clone https://github.com/laranode/skeleton.git my-app
+cd my-app
+npm install
+node artisan serve</code></pre>
+        </section>
+
+        <!-- BASICS -->
+        <section id="routing">
+            <h2>Routing</h2>
+            <p>Define your application routes in <code>routes/web.js</code> and <code>routes/api.js</code>.</p>
+            <pre><code>const Route = use('laranode/Support/Facades/Route');
+
+// Simple GET route
+Route.get('/welcome', (req, res) => 'Hello World');
+
+// Controller route
+Route.get('/profile', 'UserController&#64;show');
+
+// Route Groups
+Route.group({ prefix: '/admin', middleware: ['auth'] }, () => {
+    Route.get('/dashboard', 'AdminController&#64;index');
+});</code></pre>
+            <h3>Route Parameters</h3>
+            <p>LaraNode automatically parses parameters and even supports <strong>Route Model Binding</strong>.</p>
+            <pre><code>// Automatic injection of User model
+Route.get('/users/{user}', (req, res) => {
+    return req.params.user; // User model instance!
+});</code></pre>
+        </section>
+
+        <section id="controllers">
+            <h2>Controllers</h2>
+            <p>Controllers can group related request handling logic into a single class.</p>
+            <pre><code>const Controller = use('laranode/Http/Controllers/Controller');
+
+class UserController extends Controller {
+    async show(req, res) {
+        return view('user.profile', { user: req.user });
+    }
+}</code></pre>
+        </section>
+
+        <section id="middleware">
+            <h2>Middleware</h2>
+            <p>Middleware provides a convenient mechanism for inspecting and filtering HTTP requests entering your application.</p>
+            <pre><code>class EnsureTokenIsValid {
+    async handle(req, res, next) {
+        if (req.input('token') !== 'secret') {
+            return res.redirect('home');
+        }
+        return next();
+    }
+}</code></pre>
+        </section>
+
+        <section id="validation">
+            <h2>The Validation Engine</h2>
+            <p>LaraNode features an extremely powerful, asynchronous validation engine completely matching Laravel's capabilities.</p>
+            
+            <h3>Validating FormRequests</h3>
+            <p>The cleanest way to validate data is by utilizing FormRequests.</p>
+            <pre><code>// In app/Http/Controllers/TodoController.js
+static get requests() {
+    return {
+        store: use('app/Http/Requests/Todo/StoreTodoRequest')
+    };
+}
+
+async store(req, res) {
+    await Todo.create(req.all());
+    return res.redirect('/');
+}</code></pre>
+
+            <h3>Validation Rules Reference</h3>
+            <p>Below is a comprehensive list of all available validation rules.</p>
+
+            <div class="rule-group">
+                <div class="rule-card" id="rule-accepted">
+                    <h4>accepted</h4>
+                    <div class="meta">Boolean / Presence</div>
+                    <p>The field under validation must be <code>true</code>, <code>"true"</code>, <code>1</code>, <code>"1"</code>, <code>"yes"</code>, or <code>"on"</code>.</p>
+                    <pre><code>'terms' => 'accepted'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-accepted_if">
+                    <h4>accepted_if:anotherfield,value</h4>
+                    <div class="meta">Conditional</div>
+                    <p>The field under validation must be "accepted" if the another field is equal to a specified value.</p>
+                    <pre><code>'terms' => 'accepted_if:is_adult,true'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-active_url">
+                    <h4>active_url</h4>
+                    <div class="meta">String / Network</div>
+                    <p>The field under validation must have a valid A or AAAA record according to the <code>dns.lookup</code> Node.js function.</p>
+                    <pre><code>'website' => 'active_url'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-after">
+                    <h4>after:date</h4>
+                    <div class="meta">Date</div>
+                    <p>The field under validation must be a value after a given date.</p>
+                    <pre><code>'start_date' => 'after:2025-01-01'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-alpha">
+                    <h4>alpha</h4>
+                    <div class="meta">String</div>
+                    <p>The field under validation must be entirely alphabetic characters.</p>
+                    <pre><code>'name' => 'alpha'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-boolean">
+                    <h4>boolean</h4>
+                    <div class="meta">Type</div>
+                    <p>The field under validation must be able to be cast as a boolean. Accepted input are <code>true</code>, <code>false</code>, <code>1</code>, <code>0</code>, <code>"1"</code>, and <code>"0"</code>.</p>
+                    <pre><code>'is_admin' => 'boolean'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-confirmed">
+                    <h4>confirmed</h4>
+                    <div class="meta">Cross-Field</div>
+                    <p>The field under validation must have a matching field of <code>{field}_confirmation</code>.</p>
+                    <pre><code>'password' => 'required|confirmed'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-current_password">
+                    <h4>current_password</h4>
+                    <div class="meta">Authentication</div>
+                    <p>The field under validation must match the authenticated user's password.</p>
+                    <pre><code>'old_password' => 'current_password'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-date">
+                    <h4>date</h4>
+                    <div class="meta">Type</div>
+                    <p>The field under validation must be a valid, non-relative date according to the <code>Date.parse</code> function.</p>
+                    <pre><code>'birthday' => 'date'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-distinct">
+                    <h4>distinct</h4>
+                    <div class="meta">Array</div>
+                    <p>When validating an array, the field under validation must not have any duplicate values.</p>
+                    <pre><code>'tags.*' => 'distinct'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-email">
+                    <h4>email</h4>
+                    <div class="meta">String</div>
+                    <p>The field under validation must be formatted as an email address.</p>
+                    <pre><code>'email' => 'required|email'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-exists">
+                    <h4>exists:table,column</h4>
+                    <div class="meta">Database</div>
+                    <p>The field under validation must exist on a given database table.</p>
+                    <pre><code>'user_id' => 'exists:users,id'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-image">
+                    <h4>image</h4>
+                    <div class="meta">File</div>
+                    <p>The file under validation must be an image (jpeg, png, bmp, gif, svg, or webp).</p>
+                    <pre><code>'avatar' => 'image'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-max">
+                    <h4>max:value</h4>
+                    <div class="meta">Size</div>
+                    <p>The field under validation must be less than or equal to a maximum value. Strings, numerics, and arrays are evaluated in the same fashion as the <code>size</code> rule.</p>
+                    <pre><code>'bio' => 'max:500'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-min">
+                    <h4>min:value</h4>
+                    <div class="meta">Size</div>
+                    <p>The field under validation must have a minimum value.</p>
+                    <pre><code>'password' => 'min:8'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-nullable">
+                    <h4>nullable</h4>
+                    <div class="meta">Utility</div>
+                    <p>The field under validation may be <code>null</code>. This is particularly useful when validating primitive types such as strings and integers that can contain <code>null</code> values.</p>
+                    <pre><code>'middle_name' => 'nullable|string'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-numeric">
+                    <h4>numeric</h4>
+                    <div class="meta">Type</div>
+                    <p>The field under validation must be numeric.</p>
+                    <pre><code>'price' => 'numeric'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-regex">
+                    <h4>regex:pattern</h4>
+                    <div class="meta">String</div>
+                    <p>The field under validation must match the given regular expression.</p>
+                    <pre><code>'slug' => 'regex:/^[a-z0-9-]+$/'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-required">
+                    <h4>required</h4>
+                    <div class="meta">Presence</div>
+                    <p>The field under validation must be present in the input data and not empty.</p>
+                    <pre><code>'title' => 'required'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-unique">
+                    <h4>unique:table,column,ignoreId</h4>
+                    <div class="meta">Database</div>
+                    <p>The field under validation must not exist within the given database table.</p>
+                    <pre><code>'email' => 'unique:users,email'</code></pre>
+                </div>
+
+                <div class="rule-card" id="rule-url">
+                    <h4>url</h4>
+                    <div class="meta">String</div>
+                    <p>The field under validation must be a valid URL.</p>
+                    <pre><code>'website' => 'url'</code></pre>
+                </div>
+
+                <p><em>...and dozens more including <code>prohibited</code>, <code>present</code>, <code>missing</code>, <code>ulid</code>, <code>uuid</code>, <code>mac_address</code>, etc. matching Laravel's exact behavior.</em></p>
+            </div>
+        </section>
+
+        <!-- DATABASE -->
+        <section id="loquent">
+            <h2>Loquent ORM</h2>
+            <p>Loquent is our "Active Record" implementation. It makes interacting with your database as simple as writing English.</p>
+            <pre><code>const Model = use('laranode/Database/Loquent/Model');
+
+class User extends Model {
+    static table = 'users'; // default
+    static fillable = ['name', 'email', 'password'];
+
+    posts() {
+        return this.hasMany(use('App/Models/Post'), 'user_id');
+    }
+}
+
+// Fetch all admins
+const admins = await User.where('role', 'admin').get();</code></pre>
+        </section>
+
+        <section id="query-builder">
+            <h2>Query Builder</h2>
+            <p>LaraNode's database query builder provides a convenient, fluent interface to creating and running database queries.</p>
+            <pre><code>const DB = use('laranode/Support/Facades/DB');
+
+const users = await DB.table('users')
+    .where('votes', '>', 100)
+    .get();</code></pre>
+        </section>
+
+        <section id="migrations">
+            <h2>Migrations & Schema</h2>
+            <p>Migrations are like version control for your database, allowing your team to modify and share the application's database schema.</p>
+            <pre><code>const Schema = use('laranode/Support/Facades/Schema');
+
+async up() {
+    await Schema.create('users', (table) => {
+        table.id();
+        table.string('email').unique();
+        table.timestamps();
+    });
+}</code></pre>
+        </section>
+
+        <!-- THE FRONTEND -->
+        <section id="templating">
+            <h2>Edge Templating</h2>
+            <p>Edge is our Laravel Blade-like engine. Use <code>@extends</code>, <code>@section</code>, and <code>@yield</code> to build DRY layouts.</p>
+            <pre><code>&lt;!-- layout.edge --&gt;
+&lt;div class="content"&gt;
+    &#64;yield('main')
+&lt;/div&gt;
+
+&lt;!-- welcome.edge --&gt;
+&#64;extends('layout')
+&#64;section('main')
+    &lt;h1&gt;Welcome, &#123;&#123; user.name &#125;&#125;&lt;/h1&gt;
+&#64;endsection</code></pre>
+        </section>
+
+        <section id="localization">
+            <h2>Localization</h2>
+            <p>LaraNode's localization features provide a convenient way to retrieve strings in various languages.</p>
+            <pre><code>// resources/lang/en/messages.js
+module.exports = {
+    welcome: 'Welcome'
+};
+
+// In view
+{{ __('messages.welcome') }}</code></pre>
+        </section>
+
+        <!-- SECURITY -->
+        <section id="authentication">
+            <h2>Authentication</h2>
+            <p>LaraNode provides built-in API token management inspired by Laravel Sanctum.</p>
+            <pre><code>const tokenResult = await user.createToken('my-token');
+return res.json({ token: tokenResult.plainTextToken });</code></pre>
+        </section>
+
+        <section id="security">
+            <h2>CSRF & CORS</h2>
+            <p>LaraNode includes middleware to protect your application from cross-site request forgery and manage cross-origin resource sharing.</p>
+            <pre><code>// In config/cors.js
+module.exports = {
+    paths: ['api/*', 'sanctum/csrf-cookie'],
+    allowed_methods: ['*'],
+    // ...
+};</code></pre>
+        </section>
+
+        <!-- ADVANCED -->
+        <section id="artisan">
+            <h2>Artisan CLI</h2>
+            <p>Use the Artisan command-line tool to automate your workflow.</p>
+            <pre><code>node artisan serve
+node artisan migrate
+node artisan make:controller UserController</code></pre>
+        </section>
+
+        <section id="process">
+            <h2>The Lifecycle</h2>
+            <p>Understanding the LaraNode request lifecycle is key to building complex applications.</p>
+            <ol>
+                <li>Request enters <code>index.js</code></li>
+                <li>Application is Bootstrapped</li>
+                <li>HTTP Kernel handles request</li>
+                <li>Global Middleware executes</li>
+                <li>Route is resolved & Middleware executes</li>
+                <li>Controller handles request</li>
+                <li>Response is sent back to client</li>
+            </ol>
+        </section>
+    </main>
+
+    <script>
+        // Simple scroll spy for active nav links
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('nav a');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

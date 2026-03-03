@@ -1,0 +1,15 @@
+const JsonResource = use('laranode/Http/Resources/JsonResource');
+
+class {{ class }} extends JsonResource {
+    /**
+     * Transform the resource into an array/object.
+     *
+     * @param  {Request} request
+     * @return {Object}
+     */
+    toArray(request) {
+        return super.toArray(request);
+    }
+}
+
+module.exports = {{ class }};

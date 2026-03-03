@@ -1,0 +1,7 @@
+const Controller = use('App/Http/Controllers/Controller');
+
+class {{ class }} extends Controller {
+    //
+}
+
+module.exports = {{ class }};

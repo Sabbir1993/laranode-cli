@@ -1,0 +1,29 @@
+{
+    "name": "laranode-cli",
+    "version": "1.0.0",
+    "description": "The LaraNode Framework CLI Installer",
+    "author": "Sabbir Hosain Chowdury <sabbirchowdury000@gmail.com>",
+    "main": "bin/laranode.js",
+    "bin": {
+        "laranode": "./bin/laranode.js"
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "laranode",
+        "cli",
+        "framework",
+        "nodejs",
+        "laravel"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/your-username/laranode-cli"
+    },
+    "homepage": "https://github.com/your-username/laranode-cli",
+    "dependencies": {
+        "commander": "^14.0.3"
+    }
+}

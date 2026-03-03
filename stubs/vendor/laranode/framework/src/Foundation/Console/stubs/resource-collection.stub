@@ -1,0 +1,15 @@
+const ResourceCollection = use('laranode/Http/Resources/ResourceCollection');
+
+class {{ class }} extends ResourceCollection {
+    /**
+     * Transform the resource collection into an array/object.
+     *
+     * @param  {Request} request
+     * @return {Object|Array}
+     */
+    toArray(request) {
+        return super.toArray(request);
+    }
+}
+
+module.exports = {{ class }};
