@@ -671,6 +671,8 @@ Visit `/logs` to view application logs with:
 
 ### Artisan CLI
 
+The LaraNode Artisan CLI provides commands for scaffolding, database management, and running your application.
+
 ```bash
 # Start the development server
 node artisan serve
@@ -681,6 +683,36 @@ node artisan serve --port=8080
 # Run scheduled commands
 node artisan schedule:run
 ```
+
+#### Available Commands
+
+Here is a full list of available Artisan commands:
+
+| Command | Description | Usage |
+|---|---|---|
+| **Development** | | |
+| `serve` | Serve the application on the local development server | `node artisan serve [options]` |
+| `route:list` | List all registered routes | `node artisan route:list [options]` |
+| **Make (Scaffolding)** | | |
+| `make:controller` | Create a new controller class | `node artisan make:controller [options] <name>` |
+| `make:model` | Create a new Loquent model class | `node artisan make:model [options] <name>` |
+| `make:middleware` | Create a new middleware class | `node artisan make:middleware <name>` |
+| `make:migration` | Create a new migration file | `node artisan make:migration <name>` |
+| `make:seeder` | Create a new seeder class | `node artisan make:seeder <name>` |
+| `make:request` | Create a new form request class | `node artisan make:request <name>` |
+| `make:resource` | Create a new API resource class | `node artisan make:resource [options] <name>` |
+| `make:command` | Create a new Artisan command | `node artisan make:command <name>` |
+| `make:rule` | Create a new custom validation rule class | `node artisan make:rule <name>` |
+| **Database** | | |
+| `migrate` | Run the database migrations | `node artisan migrate` |
+| `migrate:rollback`| Rollback the last database migration | `node artisan migrate:rollback` |
+| `migrate:fresh` | Drop all tables and re-run all migrations | `node artisan migrate:fresh [options]` |
+| `db:seed` | Seed the database with records | `node artisan db:seed [options]` |
+| **System** | | |
+| `schedule:run` | Run the scheduled commands | `node artisan schedule:run` |
+| `help` | Display help for a specific command | `node artisan help [command]` |
+
+*Note: You can run `node artisan help <command>` for more detailed usage and available options for any specific command.*
 
 ---
 
