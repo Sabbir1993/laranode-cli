@@ -12,5 +12,9 @@ app.boot().then(() => {
     const kernel = new Kernel(app);
     return kernel.handle();
 }).catch(err => {
+    if (err && err.name === 'CommanderError') {
+        process.exit(err.exitCode);
+    }
     console.error('Failed to boot Artisan:', err);
+    process.exit(1);
 });

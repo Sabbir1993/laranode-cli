@@ -1,4 +1,6 @@
 const { program } = require('commander');
+const fs = require('fs');
+const path = require('path');
 
 class Kernel {
     constructor(app) {
@@ -35,6 +37,27 @@ class Kernel {
             command.setProgram(program);
             command.register();
             this.commands.push(command);
+        }
+
+        // Auto-load application commands
+        if (this.app && this.app.basePath) {
+            const commandsPath = path.join(this.app.basePath, 'app', 'Console', 'Commands');
+            if (fs.existsSync(commandsPath)) {
+                const files = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+                for (const file of files) {
+                    try {
+                        const commandClass = require(path.join(commandsPath, file));
+                        if (typeof commandClass === 'function' && commandClass.prototype && commandClass.prototype.register) {
+                            const command = new commandClass(this.app);
+                            command.setProgram(program);
+                            command.register();
+                            this.commands.push(command);
+                        }
+                    } catch (e) {
+                        // silently ignore files that are not valid commands or can't be registered
+                    }
+                }
+            }
         }
     }
 
