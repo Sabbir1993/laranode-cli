@@ -100,7 +100,7 @@ class NewCommand {
         console.log('');
         console.log(colors.dim(`  Next steps:`));
         console.log(`    ${colors.cyan('cd')} ${name}`);
-        console.log(`    ${colors.cyan('node')} server.js`);
+        console.log(`    ${colors.cyan('node')} artisan serve`);
         console.log('');
         console.log(colors.dim(`  Then open: http://localhost:3333`));
         console.log('');
