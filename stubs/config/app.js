@@ -55,6 +55,7 @@ module.exports = {
     */
     providers: [
         // Laranode Framework Service Providers...
+        require(base_path('vendor/laranode/framework/src/Http/HttpServiceProvider')),
         require(base_path('vendor/laranode/framework/src/Foundation/Providers/RouteServiceProvider')),
         require(base_path('vendor/laranode/framework/src/Foundation/Providers/DatabaseServiceProvider')),
         require(base_path('vendor/laranode/framework/src/Log/LogServiceProvider')),
@@ -65,6 +66,7 @@ module.exports = {
         require(base_path('vendor/laranode/framework/src/Encryption/EncryptionServiceProvider')),
 
         // Application Service Providers...
-        // app/Providers/AppServiceProvider.js,
+        require(base_path('app/Providers/AppServiceProvider')),
+        require(base_path('app/Providers/RouteServiceProvider')),
     ],
 };

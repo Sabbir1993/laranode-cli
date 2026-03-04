@@ -107,18 +107,24 @@
                 <li><a href="#introduction">Introduction</a></li>
                 <li><a href="#installation">Installation</a></li>
             </ul>
+            <h3>Architecture</h3>
+            <ul>
+                <li><a href="#service-providers">Service Providers</a></li>
+                <li><a href="#facades">Facades</a></li>
+                <li><a href="#helpers">Helpers</a></li>
+            </ul>
             <h3>Basics</h3>
             <ul>
                 <li><a href="#routing">Routing</a></li>
                 <li><a href="#controllers">Controllers</a></li>
                 <li><a href="#middleware">Middleware</a></li>
-                <li><a href="#validation">The Validation Engine</a></li>
+                <li><a href="#validation">Validation</a></li>
             </ul>
             <h3>Database</h3>
             <ul>
                 <li><a href="#loquent">Loquent ORM</a></li>
                 <li><a href="#query-builder">Query Builder</a></li>
-                <li><a href="#migrations">Migrations & Schema</a></li>
+                <li><a href="#migrations">Migrations &amp; Schema</a></li>
             </ul>
             <h3>The Frontend</h3>
             <ul>
@@ -128,11 +134,12 @@
             <h3>Security</h3>
             <ul>
                 <li><a href="#authentication">Authentication</a></li>
-                <li><a href="#security">CSRF & CORS</a></li>
+                <li><a href="#security">CSRF &amp; CORS</a></li>
             </ul>
             <h3>Advanced</h3>
             <ul>
                 <li><a href="#artisan">Artisan CLI</a></li>
+                <li><a href="#http-client">HTTP Client</a></li>
                 <li><a href="#process">The Lifecycle</a></li>
             </ul>
         </nav>
@@ -170,38 +177,215 @@ npm install
 node artisan serve</code></pre>
         </section>
 
+        <!-- ARCHITECTURE -->
+        <section id="service-providers">
+            <h2>Service Providers</h2>
+            <p>Service Providers are the central place of all LaraNode application bootstrapping. Your own application, as well as all of LaraNode's core services, are bootstrapped via service providers. Every provider extends the base <code>ServiceProvider</code> class and has two methods: <code>register()</code> and <code>boot()</code>.</p>
+
+            <h3>The Register Method</h3>
+            <p>The <code>register()</code> method is for binding things into the service container. You should never attempt to register any event listeners, routes, or any other piece of functionality within <code>register()</code>.</p>
+            <pre><code>const ServiceProvider = use('laranode/Support/ServiceProvider');
+
+class AppServiceProvider extends ServiceProvider {
+    register() {
+        // Bind a singleton into the container
+        this.app.singleton('analytics', function (app) {
+            return new AnalyticsService(app.make('config').get('analytics'));
+        });
+    }
+}</code></pre>
+
+            <h3>The Boot Method</h3>
+            <p>The <code>boot()</code> method is called after all providers have been registered. This is where you should register macros, event listeners, global helpers, or any other bootstrap logic.</p>
+            <pre><code>const Http = use('laranode/Support/Facades/Http');
+
+class AppServiceProvider extends ServiceProvider {
+    boot() {
+        // Register HTTP macros
+        Http.macro('github', function () {
+            return this.withBaseUrl('https://api.github.com')
+                .withHeaders({ 'Accept': 'application/vnd.github.v3+json' });
+        });
+
+        // Register global helpers
+        global.formatCurrency = (amount) => '$' + parseFloat(amount).toFixed(2);
+    }
+}</code></pre>
+
+            <h3>RouteServiceProvider</h3>
+            <p>The <code>RouteServiceProvider</code> (located at <code>app/Providers/RouteServiceProvider.js</code>) manages all route file loading. You can add custom route files here.</p>
+            <pre><code>class RouteServiceProvider extends ServiceProvider {
+    configureRoutes() {
+        const router = this.app.make('router');
+
+        // Web routes (session, CSRF)
+        router.group({ middleware: ['web'] }, () => {
+            this.loadRouteFile('routes/web.js');
+        });
+
+        // API routes (stateless, /api prefix)
+        router.group({ prefix: '/api', middleware: ['api'] }, () => {
+            this.loadRouteFile('routes/api.js');
+        });
+
+        // Custom route files
+        router.group({ prefix: '/admin', middleware: ['web', 'auth'] }, () => {
+            this.loadRouteFile('routes/admin.js');
+        });
+    }
+}</code></pre>
+
+            <h3>Registering Providers</h3>
+            <p>All service providers are registered in the <code>providers</code> array within <code>config/app.js</code>. Framework providers load first, then your application providers.</p>
+            <pre><code>// config/app.js
+providers: [
+    // Framework Service Providers...
+    require(base_path('vendor/laranode/framework/src/Http/HttpServiceProvider')),
+    require(base_path('vendor/laranode/framework/src/Foundation/Providers/RouteServiceProvider')),
+    // ...
+
+    // Application Service Providers...
+    require(base_path('app/Providers/AppServiceProvider')),
+    require(base_path('app/Providers/RouteServiceProvider')),
+]</code></pre>
+        </section>
+
+        <section id="facades">
+            <h2>Facades</h2>
+            <p>Facades provide a static-like interface to services that are available in the application's service container. Think of them as convenient shortcuts — instead of manually resolving services from the container, you can call methods directly on the Facade class.</p>
+            <pre><code>// All available Facades
+const Route  = use('laranode/Support/Facades/Route');   // Routing
+const Auth   = use('laranode/Support/Facades/Auth');     // Authentication
+const DB     = use('laranode/Support/Facades/DB');       // Database
+const Hash   = use('laranode/Support/Facades/Hash');     // Hashing
+const Crypt  = use('laranode/Support/Facades/Crypt');    // Encryption
+const Config = use('laranode/Support/Facades/Config');   // Configuration
+const Log    = use('laranode/Support/Facades/Log');      // Logging
+const Lang   = use('laranode/Support/Facades/Lang');     // Translation
+const Http   = use('laranode/Support/Facades/Http');     // HTTP Client</code></pre>
+            <p>Each Facade class resolves its underlying service from the IoC container. For example, <code>Http</code> resolves the HTTP client factory, so <code>Http.get()</code> calls <code>get()</code> on the resolved instance. This means you can use Facades anywhere — controllers, service providers, route files, etc.</p>
+        </section>
+
+        <section id="helpers">
+            <h2>Global Helpers</h2>
+            <p>LaraNode provides a set of global helper functions available everywhere — controllers, service providers, views, and even the CLI. No imports needed.</p>
+            <pre><code>// Path helpers
+base_path('config/app.js')       // /my-app/config/app.js
+app_path('Models/User.js')       // /my-app/app/Models/User.js
+config_path()                    // /my-app/config
+database_path('migrations')      // /my-app/database/migrations
+public_path('css/app.css')       // /my-app/public/css/app.css
+resource_path('views')           // /my-app/resources/views
+storage_path('logs')             // /my-app/storage/logs
+
+// Configuration &amp; Environment
+env('APP_DEBUG', false)          // Read .env variables
+config('app.name', 'LaraNode')   // Read config values
+
+// URL helpers
+url('/users/1')                  // http://localhost:3333/users/1
+asset('css/app.css')             // http://localhost:3333/css/app.css
+route('login')                   // URL for named route 'login'
+
+// Utilities
+collect([1,2,3])                 // Create a Collection
+use('laranode/Support/Facades/DB') // Resolve a module (like require)
+dd(variable)                     // Dump &amp; die (debug)
+dump(variable)                   // Dump (console.log)</code></pre>
+
+            <h3>Custom Helpers</h3>
+            <p>Register your own global helpers in <code>AppServiceProvider</code> or a dedicated <code>app/helpers.js</code> file. They will be available everywhere, including Edge views.</p>
+            <pre><code>// app/helpers.js
+global.formatCurrency = (amount) => '$' + parseFloat(amount).toFixed(2);
+global.truncate = (str, len = 50) => str.length > len ? str.slice(0, len) + '...' : str;
+
+// app/Providers/AppServiceProvider.js
+boot() {
+    require(base_path('app/helpers'));
+}
+
+// Then use anywhere, including views:
+// &#123;&#123; formatCurrency(product.price) &#125;&#125;</code></pre>
+        </section>
+
         <!-- BASICS -->
         <section id="routing">
             <h2>Routing</h2>
-            <p>Define your application routes in <code>routes/web.js</code> and <code>routes/api.js</code>.</p>
+            <p>All LaraNode routes are defined in the <code>routes/</code> directory. Routes in <code>routes/web.js</code> are assigned the <code>web</code> middleware group (session, CSRF). Routes in <code>routes/api.js</code> are stateless and prefixed with <code>/api</code>. Route files are loaded by your <code>RouteServiceProvider</code>.</p>
+
+            <h3>Basic Routes</h3>
             <pre><code>const Route = use('laranode/Support/Facades/Route');
 
-// Simple GET route
+// Closure route
 Route.get('/welcome', (req, res) => 'Hello World');
 
 // Controller route
 Route.get('/profile', 'UserController&#64;show');
+Route.post('/profile', 'UserController&#64;update');
+Route.put('/users/{id}', 'UserController&#64;update');
+Route.delete('/users/{id}', 'UserController&#64;destroy');</code></pre>
 
-// Route Groups
-Route.group({ prefix: '/admin', middleware: ['auth'] }, () => {
+            <h3>Named Routes</h3>
+            <p>Named routes allow you to generate URLs or redirects using <code>route('name')</code>.</p>
+            <pre><code>Route.get('/login', 'AuthController&#64;showForm').name('login');
+
+// Generate URL: route('login') => '/login'</code></pre>
+
+            <h3>Route Groups</h3>
+            <p>Route groups allow you to share attributes like middleware and URL prefixes across multiple routes.</p>
+            <pre><code>Route.group({ prefix: '/admin', middleware: ['auth'] }, () => {
     Route.get('/dashboard', 'AdminController&#64;index');
+    Route.get('/users', 'AdminController&#64;users');
 });</code></pre>
+
             <h3>Route Parameters</h3>
-            <p>LaraNode automatically parses parameters and even supports <strong>Route Model Binding</strong>.</p>
-            <pre><code>// Automatic injection of User model
-Route.get('/users/{user}', (req, res) => {
-    return req.params.user; // User model instance!
+            <p>LaraNode automatically parses route parameters and makes them available on <code>req.params</code>.</p>
+            <pre><code>Route.get('/users/{id}', (req, res) => {
+    return res.json({ userId: req.params.id });
 });</code></pre>
         </section>
 
         <section id="controllers">
             <h2>Controllers</h2>
-            <p>Controllers can group related request handling logic into a single class.</p>
-            <pre><code>const Controller = use('laranode/Http/Controllers/Controller');
+            <p>Controllers group related request handling logic into a single class. They reside in <code>app/Http/Controllers/</code>. All controllers extend the base <code>Controller</code> class.</p>
+            <pre><code>const Controller = use('laranode/Routing/Controller/Controller');
 
 class UserController extends Controller {
+    // GET /users
+    async index(req, res) {
+        const users = await User.all();
+        return res.view('users.index', { users });
+    }
+
+    // POST /users
+    async store(req, res) {
+        const user = await User.create(req.only(['name', 'email']));
+        return res.redirect('/users');
+    }
+
+    // GET /users/:id
     async show(req, res) {
-        return view('user.profile', { user: req.user });
+        const user = await User.findOrFail(req.params.id);
+        await user.load('posts');  // Load relations before view
+        return res.view('users.show', { user });
+    }
+}
+
+module.exports = UserController;</code></pre>
+
+            <h3>FormRequest Validation</h3>
+            <p>Attach FormRequests to controller methods for automatic validation before the method runs.</p>
+            <pre><code>class TodoController extends Controller {
+    static get requests() {
+        return {
+            store: use('App/Http/Requests/StoreTodoRequest')
+        };
+    }
+
+    // req.all() is already validated when this runs
+    async store(req, res) {
+        await Todo.create(req.all());
+        return res.redirect('/');
     }
 }</code></pre>
         </section>
@@ -409,6 +593,18 @@ class User extends Model {
 
 // Fetch all admins
 const admins = await User.where('role', 'admin').get();</code></pre>
+
+            <h3>Loading Relations</h3>
+            <p>Use <code>with()</code> for eager loading at query time, or <code>load()</code> / <code>loadMissing()</code> to explicitly load relations on an existing model instance before passing to a view.</p>
+            <pre><code>// Eager loading at query time (most efficient for lists)
+const users = await User.with('posts', 'roles').get();
+
+// Explicit loading on an instance (useful before views)
+const user = await User.find(1);
+await user.load('posts', 'roles');         // Always (re)loads from DB
+await user.loadMissing('comments');        // Only loads if not loaded yet
+
+// Then use in your view: &#123;&#123; user.posts &#125;&#125;, &#123;&#123; user.roles &#125;&#125;</code></pre>
         </section>
 
         <section id="query-builder">
@@ -419,6 +615,43 @@ const admins = await User.where('role', 'admin').get();</code></pre>
 const users = await DB.table('users')
     .where('votes', '>', 100)
     .get();</code></pre>
+
+            <h3>Subquery Joins</h3>
+            <p>Use <code>joinSub()</code>, <code>leftJoinSub()</code>, and <code>rightJoinSub()</code> to join against subqueries. Supports both simple and closure-based multi-condition joins.</p>
+            <pre><code>// Build a subquery
+const latestPosts = DB.table('posts')
+    .select('user_id')
+    .selectRaw('MAX(created_at) as last_post')
+    .groupBy('user_id');
+
+// Simple joinSub
+const users = await DB.table('users')
+    .joinSub(latestPosts, 'lp', 'users.id', '=', 'lp.user_id')
+    .select('users.*', 'lp.last_post')
+    .get();
+
+// Closure-based multi-condition joinSub
+await DB.table('users')
+    .joinSub(latestPosts, 'lp', (join) => {
+        join.on('users.id', '=', 'lp.user_id')
+            .on('users.tenant_id', '=', 'lp.tenant_id')
+            .where('lp.total', '>', 100);
+    })
+    .get();
+
+// leftJoinSub / rightJoinSub
+await DB.table('users')
+    .leftJoinSub(orderTotals, 'summary', 'users.id', '=', 'summary.user_id')
+    .get();</code></pre>
+
+            <h3>Closure-Based Joins</h3>
+            <p>Existing <code>join()</code>, <code>leftJoin()</code>, and <code>rightJoin()</code> also support closures for multiple ON conditions.</p>
+            <pre><code>await User.join('posts', (join) => {
+    join.on('users.id', '=', 'posts.user_id')
+        .on('users.tenant_id', '=', 'posts.tenant_id')
+        .where('posts.published', true)
+        .whereNotNull('posts.title');
+}).get();</code></pre>
         </section>
 
         <section id="migrations">
@@ -438,17 +671,56 @@ async up() {
         <!-- THE FRONTEND -->
         <section id="templating">
             <h2>Edge Templating</h2>
-            <p>Edge is our Laravel Blade-like engine. Use <code>@extends</code>, <code>@section</code>, and <code>@yield</code> to build DRY layouts.</p>
-            <pre><code>&lt;!-- layout.edge --&gt;
-&lt;div class="content"&gt;
-    &#64;yield('main')
-&lt;/div&gt;
+            <p>Edge is LaraNode's Blade-like templating engine. Templates use the <code>.edge</code> extension and reside in <code>resources/views/</code>. Edge supports layouts, partials, control structures, and all global helper functions.</p>
 
-&lt;!-- welcome.edge --&gt;
-&#64;extends('layout')
-&#64;section('main')
+            <h3>Layouts &amp; Sections</h3>
+            <pre><code>&lt;!-- resources/views/layouts/app.edge --&gt;
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;&#64;yield('title') - &#123;&#123; config('app.name') &#125;&#125;&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+    &#64;yield('content')
+&lt;/body&gt;
+&lt;/html&gt;
+
+&lt;!-- resources/views/welcome.edge --&gt;
+&#64;extends('layouts.app')
+&#64;section('title', 'Home')
+&#64;section('content')
     &lt;h1&gt;Welcome, &#123;&#123; user.name &#125;&#125;&lt;/h1&gt;
 &#64;endsection</code></pre>
+
+            <h3>Control Structures</h3>
+            <pre><code>&#64;if(user.isAdmin)
+    &lt;span&gt;Admin Badge&lt;/span&gt;
+&#64;endif
+
+&#64;foreach(posts as post)
+    &lt;p&gt;&#123;&#123; post.title &#125;&#125;&lt;/p&gt;
+&#64;endforeach
+
+&#64;forelse(notifications as note)
+    &lt;p&gt;&#123;&#123; note.message &#125;&#125;&lt;/p&gt;
+&#64;empty
+    &lt;p&gt;No notifications.&lt;/p&gt;
+&#64;endforelse</code></pre>
+
+            <h3>Helpers in Views</h3>
+            <p>All global helpers (<code>config()</code>, <code>route()</code>, <code>url()</code>, <code>asset()</code>, and your custom helpers) are available directly in Edge templates.</p>
+            <pre><code>&lt;link href="&#123;&#123; asset('css/app.css') &#125;&#125;" rel="stylesheet"&gt;
+&lt;a href="&#123;&#123; route('login') &#125;&#125;"&gt;Login&lt;/a&gt;
+&lt;p&gt;&#123;&#123; formatCurrency(product.price) &#125;&#125;&lt;/p&gt;</code></pre>
+
+            <h3>Using Relations in Views</h3>
+            <p>To access model relations in views, load them in your controller first using <code>with()</code>, <code>load()</code>, or <code>loadMissing()</code>. Once loaded, access them as properties.</p>
+            <pre><code>// Controller
+const user = await User.find(1);
+await user.load('posts');
+return res.view('users.show', { user });
+
+// View: resources/views/users/show.edge
+&#64;foreach(user.posts as post)
+    &lt;p&gt;&#123;&#123; post.title &#125;&#125;&lt;/p&gt;
+&#64;endforeach</code></pre>
         </section>
 
         <section id="localization">
@@ -460,48 +732,211 @@ module.exports = {
 };
 
 // In view
-{{ __('messages.welcome') }}</code></pre>
+&#123;&#123; __('messages.welcome') &#125;&#125;</code></pre>
         </section>
 
         <!-- SECURITY -->
         <section id="authentication">
             <h2>Authentication</h2>
-            <p>LaraNode provides built-in API token management inspired by Laravel Sanctum.</p>
-            <pre><code>const tokenResult = await user.createToken('my-token');
-return res.json({ token: tokenResult.plainTextToken });</code></pre>
+            <p>LaraNode provides both session-based web authentication and Sanctum-style API token authentication out of the box.</p>
+
+            <h3>Session Authentication (Web)</h3>
+            <pre><code>// Protect routes with auth middleware
+Route.group({ middleware: ['auth'] }, () => {
+    Route.get('/dashboard', 'DashboardController&#64;index');
+});
+
+// Access the authenticated user
+async index(req, res) {
+    const user = req.user;
+    return res.view('dashboard', { user });
+}</code></pre>
+
+            <h3>API Token Authentication (Sanctum-style)</h3>
+            <pre><code>const HasApiTokens = use('laranode/Auth/Traits/HasApiTokens');
+
+class User extends HasApiTokens(Model) {
+    static table = 'users';
+}
+
+// Create a token
+const token = await user.createToken('api-token');
+return res.json({ token: token.plainTextToken });
+
+// Protect API routes
+Route.group({ middleware: ['auth:api'] }, () => {
+    Route.get('/user', (req, res) => res.json(req.user));
+});
+// Header: Authorization: Bearer 1|abc123...</code></pre>
+
+            <h3>Hashing &amp; Encryption</h3>
+            <pre><code>const Hash  = use('laranode/Support/Facades/Hash');
+const Crypt = use('laranode/Support/Facades/Crypt');
+
+// Hash a password
+const hashed = await Hash.make('my-password');
+const valid  = await Hash.check('my-password', hashed); // true
+
+// Encrypt / Decrypt
+const encrypted = Crypt.encrypt('sensitive-data');
+const decrypted = Crypt.decrypt(encrypted);</code></pre>
         </section>
 
         <section id="security">
-            <h2>CSRF & CORS</h2>
+            <h2>CSRF &amp; CORS</h2>
             <p>LaraNode includes middleware to protect your application from cross-site request forgery and manage cross-origin resource sharing.</p>
-            <pre><code>// In config/cors.js
+
+            <h3>CSRF Protection</h3>
+            <p>All POST/PUT/DELETE routes in the <code>web</code> middleware group are automatically protected. Use the <code>&#64;csrf</code> directive in your forms.</p>
+            <pre><code>&lt;form method="POST" action="/submit"&gt;
+    &#64;csrf
+    &lt;input name="title" /&gt;
+    &lt;button type="submit"&gt;Submit&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+            <h3>CORS</h3>
+            <pre><code>// config/cors.js
 module.exports = {
-    paths: ['api/*', 'sanctum/csrf-cookie'],
+    paths: ['api/*'],
     allowed_methods: ['*'],
-    // ...
+    allowed_origins: ['https://yourfrontend.com'],
+    allowed_headers: ['Content-Type', 'Authorization'],
 };</code></pre>
         </section>
 
         <!-- ADVANCED -->
         <section id="artisan">
             <h2>Artisan CLI</h2>
-            <p>Use the Artisan command-line tool to automate your workflow.</p>
-            <pre><code>node artisan serve
+            <p>Artisan is the command-line interface included with LaraNode. It provides a number of helpful commands that can assist you while you build your application. You can run any command using <code>node artisan</code>.</p>
+
+            <h3>Development</h3>
+            <pre><code># Start the development server
+node artisan serve
+
+# List all registered routes
+node artisan route:list</code></pre>
+
+            <h3>Make Commands (Code Generators)</h3>
+            <p>Generate boilerplate files for your application with the <code>make</code> commands.</p>
+            <pre><code># Generate a controller
+node artisan make:controller UserController
+
+# Generate a model
+node artisan make:model Post
+
+# Generate middleware
+node artisan make:middleware EnsureAdmin
+
+# Generate a migration
+node artisan make:migration create_posts_table
+
+# Generate a database seeder
+node artisan make:seeder UserSeeder
+
+# Generate a form request
+node artisan make:request StorePostRequest
+
+# Generate an API resource
+node artisan make:resource UserResource
+
+# Generate a custom artisan command
+node artisan make:command SendEmails
+
+# Generate a validation rule
+node artisan make:rule Uppercase</code></pre>
+
+            <h3>Database Commands</h3>
+            <pre><code># Run pending migrations
 node artisan migrate
-node artisan make:controller UserController</code></pre>
+
+# Rollback the last batch of migrations
+node artisan migrate:rollback
+
+# Drop all tables and re-run all migrations
+node artisan migrate:fresh
+
+# Seed the database
+node artisan db:seed</code></pre>
+
+            <h3>Queue &amp; Scheduling</h3>
+            <pre><code># Process queued jobs
+node artisan queue:work
+
+# Run scheduled tasks
+node artisan schedule:run</code></pre>
+
+            <h3>Custom Commands</h3>
+            <p>Create your own commands in <code>app/Console/Commands/</code>. They are automatically registered when placed in that directory.</p>
+            <pre><code>// app/Console/Commands/SendEmails.js
+const Command = use('laranode/Foundation/Console/Command');
+
+class SendEmails extends Command {
+    get signature() {
+        return 'emails:send';
+    }
+
+    get description() {
+        return 'Send queued emails to all users';
+    }
+
+    async handle() {
+        this.info('Sending emails...');
+        // Your logic here
+        this.info('Done!');
+    }
+}
+
+module.exports = SendEmails;</code></pre>
+        </section>
+
+        <section id="http-client">
+            <h2>HTTP Client &amp; Macros</h2>
+            <p>LaraNode features an expressive HTTP client powered by native <code>fetch</code>, accessible via the <code>Http</code> Facade. It provides a fluent API for making HTTP requests to external services.</p>
+
+            <h3>Making Requests</h3>
+            <pre><code>const Http = use('laranode/Support/Facades/Http');
+
+// Basic requests
+const response = await Http.get('https://api.github.com/users/octocat');
+const data = await Http.post('https://api.example.com/users', { name: 'John' });
+
+// Fluent configuration
+await Http.withHeaders({ 'X-Custom': '123' })
+    .withToken('super-secret-token')
+    .acceptJson()
+    .get('/endpoint');
+
+// File uploads (multipart/form-data)
+await Http.attach('avatar', fileBuffer, 'image.png')
+    .post('/upload');</code></pre>
+
+            <h3>HTTP Macros</h3>
+            <p>Register reusable HTTP client configurations as macros in your <code>AppServiceProvider</code>, then use them anywhere — controllers, services, artisan commands, etc.</p>
+            <pre><code>// app/Providers/AppServiceProvider.js
+boot() {
+    Http.macro('github', function () {
+        return this.withBaseUrl('https://api.github.com')
+            .withHeaders({ 'Accept': 'application/vnd.github.v3+json' });
+    });
+}
+
+// In your controller or service
+const response = await Http.github().get('/users/Sabbir1993');</code></pre>
         </section>
 
         <section id="process">
             <h2>The Lifecycle</h2>
             <p>Understanding the LaraNode request lifecycle is key to building complex applications.</p>
             <ol>
-                <li>Request enters <code>index.js</code></li>
-                <li>Application is Bootstrapped</li>
-                <li>HTTP Kernel handles request</li>
-                <li>Global Middleware executes</li>
-                <li>Route is resolved & Middleware executes</li>
-                <li>Controller handles request</li>
-                <li>Response is sent back to client</li>
+                <li>Request enters <code>index.js</code> (or <code>server.js</code>)</li>
+                <li>Application is bootstrapped via <code>bootstrap/app.js</code></li>
+                <li>Service Providers are registered (<code>register()</code> methods)</li>
+                <li>Service Providers are booted (<code>boot()</code> methods)</li>
+                <li>HTTP Kernel handles the incoming request</li>
+                <li>Global Middleware executes (session, CSRF, CORS, etc.)</li>
+                <li>Route is resolved &amp; route-level Middleware executes</li>
+                <li>Controller method handles the request</li>
+                <li>Response is sent back to the client</li>
             </ol>
         </section>
     </main>

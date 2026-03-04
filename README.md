@@ -70,7 +70,8 @@ node server.js
 | 📊 **Log Viewer** | Built-in web-based log viewer with severity filtering and pagination |
 | 🌐 **Translations** | Multi-language support with language files and the `Lang` facade |
 | 🗃️ **Multi-Database** | SQLite and MySQL support with connection pooling |
-| 📄 **Pagination** | Built-in query pagination with page metadata |
+| 📄 **Pagination** | Built-in query pagination with page metadata and HTML links |
+| 📮 **Queues** | Database-driven job queue with dispatch, delay, retries, and failed jobs |
 
 ---
 
@@ -189,8 +190,8 @@ class User extends Model {
     static table = 'users';
     static fillable = ['name', 'email', 'password'];
     static hidden = ['password', 'remember_token'];
+    static casts = { is_admin: 'boolean' };
 
-    // Relationships
     todos() {
         const Todo = use('App/Models/Todo');
         return this.hasMany(Todo, 'user_id');
@@ -207,54 +208,312 @@ module.exports = User;
 const user = await User.create({ name: 'John', email: 'john@example.com' });
 
 // Read
-const all = await User.all();
-const first = await User.first();
-const found = await User.find(1);
-const filtered = await User.where('email', 'john@example.com').first();
+const all     = await User.all();
+const first   = await User.first();
+const found   = await User.find(1);
+const many    = await User.findMany([1, 2, 3]);
+const fail    = await User.findOrFail(1);     // throws ModelNotFoundException
+const fail2   = await User.firstOrFail();     // throws ModelNotFoundException
+
+// Find or Create
+const user = await User.firstOrCreate({ email: 'john@example.com' }, { name: 'John' });
+const user = await User.firstOrNew({ email: 'john@example.com' }, { name: 'John' });
+const user = await User.updateOrCreate({ email: 'john@example.com' }, { name: 'Jane' });
 
 // Update
 await User.where('id', 1).update({ name: 'Jane' });
 
+// Instance update & save
+const user = await User.find(1);
+user.name = 'Jane';
+await user.save();
+
 // Delete
 await User.where('id', 1).delete();
+await User.destroy([1, 2, 3]);         // Delete by IDs
 ```
 
-#### Query Builder
+#### Query Builder — Where Clauses
 
 ```javascript
-// Chained queries
-const users = await User.where('active', true)
-    .where('role', 'admin')
-    .orderBy('created_at', 'desc')
-    .limit(10)
-    .get();
+// Basic where
+User.where('active', true)
+User.where('age', '>', 18)
+User.orWhere('role', 'admin')
 
+// Null checks
+User.whereNull('deleted_at')
+User.whereNotNull('email_verified_at')
+
+// In / Not In
+User.whereIn('status', ['active', 'pending'])
+User.whereNotIn('role', ['banned'])
+
+// Between
+User.whereBetween('age', [18, 65])
+User.whereNotBetween('price', [100, 500])
+
+// Date where clauses
+User.whereDate('created_at', '2026-01-01')
+User.whereMonth('created_at', 3)
+User.whereYear('created_at', 2026)
+User.whereDay('created_at', 15)
+
+// Column comparison
+User.whereColumn('updated_at', '>', 'created_at')
+
+// Raw where
+User.whereRaw('age > ? AND status = ?', [18, 'active'])
+
+// Exists
+User.whereExists(query => query.select('*').from('orders').whereRaw('orders.user_id = users.id'))
+```
+
+#### Query Builder — Selecting & Ordering
+
+```javascript
 // Select specific columns
-const names = await User.select('id', 'name').get();
+User.select('id', 'name', 'email').get()
+User.selectRaw('COUNT(*) as total, status').groupBy('status').get()
+User.distinct().select('role').get()
+
+// Ordering
+User.orderBy('created_at', 'desc').get()
+User.orderByRaw('FIELD(status, "active", "pending", "inactive")').get()
+User.latest().get()                    // ORDER BY created_at DESC
+User.oldest().get()                    // ORDER BY created_at ASC
+User.inRandomOrder().get()
+
+// Limit & Offset
+User.limit(10).offset(20).get()
+
+// Conditional (when)
+User.when(req.query.role, (query, role) => query.where('role', role)).get()
+```
+
+#### Query Builder — Joins
+
+```javascript
+User.join('orders', 'users.id', '=', 'orders.user_id').get()
+User.leftJoin('profiles', 'users.id', '=', 'profiles.user_id').get()
+User.rightJoin('orders', 'users.id', '=', 'orders.user_id').get()
+User.crossJoin('roles').get()
+
+// Closure-based joins (multiple conditions)
+User.join('posts', (join) => {
+    join.on('users.id', '=', 'posts.user_id')
+        .on('users.tenant_id', '=', 'posts.tenant_id');
+}).get()
+
+// Subquery Joins (joinSub / leftJoinSub / rightJoinSub)
+const latestPosts = DB.table('posts')
+    .select('user_id')
+    .selectRaw('MAX(created_at) as last_post')
+    .groupBy('user_id');
+
+DB.table('users')
+    .joinSub(latestPosts, 'latest_posts', 'users.id', '=', 'latest_posts.user_id')
+    .select('users.*', 'latest_posts.last_post')
+    .get()
+
+// Subquery join with multiple conditions
+DB.table('users')
+    .joinSub(latestPosts, 'lp', (join) => {
+        join.on('users.id', '=', 'lp.user_id')
+            .on('users.tenant_id', '=', 'lp.tenant_id');
+    })
+    .get()
+
+// leftJoinSub
+DB.table('users')
+    .leftJoinSub(orderTotals, 'summary', 'users.id', '=', 'summary.user_id')
+    .get()
+```
+
+#### Query Builder — Grouping & Aggregates
+
+```javascript
+// Grouping
+User.groupBy('role').selectRaw('role, COUNT(*) as total').get()
+User.groupBy('role').having('total', '>', 5).get()
 
 // Aggregates
-const count = await User.where('active', true).count();
+const count = await User.count();
+const max   = await User.max('age');
+const min   = await User.min('age');
+const avg   = await User.avg('salary');
+const sum   = await User.sum('balance');
+const has   = await User.where('role', 'admin').exists();
+const none  = await User.where('role', 'banned').doesntExist();
 ```
 
-#### Relationships & Eager Loading
+#### Query Builder — Insert Variants
 
 ```javascript
-// Define relationships in the model
+const DB = use('laranode/Support/Facades/DB');
+
+// Basic insert
+await DB.table('users').insert({ name: 'John', email: 'john@example.com' });
+
+// Insert and get ID
+const id = await DB.table('users').insertGetId({ name: 'Jane' });
+
+// Insert or ignore (skip duplicates)
+await DB.table('users').insertOrIgnore({ email: 'existing@example.com' });
+
+// Upsert (insert or update on duplicate key)
+await DB.table('users').upsert(
+    [{ email: 'john@example.com', name: 'John Updated' }],
+    ['email'],  // unique columns
+    ['name']    // columns to update on conflict
+);
+```
+
+#### Query Builder — Update & Delete
+
+```javascript
+// Increment / Decrement
+await User.where('id', 1).increment('login_count');
+await User.where('id', 1).increment('balance', 100, { last_deposit: new Date() });
+await User.where('id', 1).decrement('balance', 50);
+
+// Truncate table
+await DB.table('logs').truncate();
+```
+
+#### Chunking & Pagination
+
+```javascript
+// Process large datasets in chunks
+await User.where('active', true).chunk(100, async (users, page) => {
+    for (const user of users) {
+        // process each user
+    }
+    // return false to stop chunking
+});
+
+// Pluck values
+const emails = await User.pluck('email');
+const emailMap = await User.pluck('email', 'id');    // { 1: 'a@b.com', 2: 'c@d.com' }
+
+// Get a single column value
+const name = await User.where('id', 1).value('name');
+```
+
+#### Relationships
+
+```javascript
 class User extends Model {
-    todos() {
-        return this.hasMany(Todo, 'user_id');
+    // One-to-One
+    phone()   { return this.hasOne(Phone, 'user_id'); }
+
+    // One-to-Many
+    posts()   { return this.hasMany(Post, 'user_id'); }
+
+    // Belongs To (inverse)
+    team()    { return this.belongsTo(Team, 'team_id'); }
+
+    // Many-to-Many (with pivot)
+    roles()   {
+        return this.belongsToMany(Role, 'role_user', 'user_id', 'role_id')
+                   .withPivot('assigned_at')
+                   .withTimestamps();
     }
+
+    // Has One/Many Through
+    countryPhone() { return this.hasOneThrough(Phone, Country, 'country_id', 'user_id'); }
+    countryPosts() { return this.hasManyThrough(Post, Country, 'country_id', 'user_id'); }
+
+    // Polymorphic
+    image()    { return this.morphOne(Image, 'imageable'); }
+    comments() { return this.morphMany(Comment, 'commentable'); }
+    tags()     { return this.morphToMany(Tag, 'taggable'); }
 }
 
-class Todo extends Model {
-    user() {
-        return this.belongsTo(User, 'user_id');
-    }
-}
+// Pivot table operations
+await user.roles().attach([1, 2]);
+await user.roles().detach([1]);
+await user.roles().sync([1, 3, 5]);
+await user.roles().toggle([2, 4]);
+```
 
-// Eager loading (prevents N+1)
-const users = await User.with('todos').get();
-const user = await User.with('todos:id,title,completed').find(1);
+#### Eager Loading
+
+```javascript
+const users = await User.with('posts').get();
+const users = await User.with('posts', 'roles').get();
+const user  = await User.with('posts:id,title').find(1);       // Select specific columns
+
+// Querying relationship existence
+const users = await User.has('posts').get();
+const users = await User.doesntHave('posts').get();
+const users = await User.whereHas('posts', q => q.where('published', true)).get();
+const users = await User.withCount('posts').get();              // Adds posts_count
+```
+
+#### Model Events & Observers
+
+```javascript
+// Register event hooks
+User.creating(user => { user.slug = slugify(user.name); });
+User.created(user  => { console.log('User created:', user.id); });
+User.updating(user => { /* ... */ });
+User.updated(user  => { /* ... */ });
+User.deleting(user => { /* ... */ });
+User.deleted(user  => { /* ... */ });
+User.saving(user   => { /* before create or update */ });
+User.saved(user    => { /* after create or update */ });
+
+// Observer class
+User.observe({
+    creating(user) { /* ... */ },
+    created(user)  { /* ... */ },
+    updating(user) { /* ... */ },
+});
+```
+
+#### Global Scopes
+
+```javascript
+// Add a global scope
+User.addGlobalScope('active', query => query.where('active', true));
+
+// Query without a global scope
+const allUsers = await User.withoutGlobalScope('active').get();
+```
+
+#### Model Utilities
+
+```javascript
+// Instance methods
+const user = await User.find(1);
+
+user.refresh();                              // Re-fetch from DB
+const copy = user.replicate(['id']);         // Clone without id
+user.touch();                                // Update updated_at timestamp
+user.is(anotherUser);                        // Compare by primary key
+user.isNot(anotherUser);
+
+// Dirty tracking
+user.name = 'New Name';
+user.isDirty();                              // true
+user.isDirty('name');                        // true
+user.isClean();                              // false
+user.getDirty();                             // { name: 'New Name' }
+user.getOriginal('name');                    // 'Old Name'
+
+// Serialization
+user.toArray();                              // Plain object (respects hidden)
+user.toJSON();                               // JSON-safe object (respects hidden)
+user.makeVisible(['password']);               // Temporarily unhide
+user.makeHidden(['email']);                   // Temporarily hide
+
+// Load relations explicitly (useful before passing to views)
+const user = await User.find(1);
+await user.load('posts', 'roles');         // Always (re)loads from DB
+await user.loadMissing('comments');        // Only loads if not already loaded
+
+// Then in your view: {{ user.posts }}, {{ user.roles }}
 ```
 
 #### Soft Deletes
@@ -432,6 +691,57 @@ const Crypt  = use('laranode/Support/Facades/Crypt');    // Encryption
 const Config = use('laranode/Support/Facades/Config');   // Configuration
 const Log    = use('laranode/Support/Facades/Log');      // Logging
 const Lang   = use('laranode/Support/Facades/Lang');     // Translation
+const Http   = use('laranode/Support/Facades/Http');     // HTTP Client
+```
+
+#### HTTP Client & Macros
+
+LaraNode features an expressive, fluent HTTP client (powered by native `fetch`) that is accessible via the `Http` Facade. It behaves identically to Laravel's HTTP Client.
+
+```javascript
+const Http = use('laranode/Support/Facades/Http');
+
+// Basic Requests
+const response = await Http.get('https://api.github.com/users/octocat');
+const data     = await Http.post('https://api.example.com/users', { name: 'John' });
+
+// Response helpers
+response.status();       // 200
+response.successful();   // true
+response.json();         // { ... }
+response.header('x-ratelimit-remaining');
+
+// Fluent configuration
+await Http.withHeaders({ 'X-Custom': '123' })
+          .withToken('super-secret-token')
+          .acceptJson()
+          .get('/endpoint');
+
+// File Uploads (Multipart/Form-Data)
+const fileBuffer = fs.readFileSync('image.png');
+await Http.attach('avatar', fileBuffer, 'image.png')
+          .post('/upload');
+```
+
+**Macros**
+
+You can register macros (custom HTTP client configurations) in your `AppServiceProvider` and call them fluently anywhere in your application.
+
+```javascript
+// app/Providers/AppServiceProvider.js
+const Http = use('laranode/Support/Facades/Http');
+
+class AppServiceProvider extends ServiceProvider {
+    boot() {
+        Http.macro('github', function () {
+            return this.withBaseUrl('https://api.github.com')
+                       .withHeaders({ 'Accept': 'application/vnd.github.v3+json' });
+        });
+    }
+}
+
+// In your Controllers
+const response = await Http.github().get('/users/Sabbir1993');
 ```
 
 #### Hashing
@@ -590,6 +900,137 @@ const result = await DB.raw('SELECT * FROM users WHERE id = ?', [1]);
 
 ---
 
+### Pagination
+
+LaraNode provides two types of paginators — `paginate()` for full page-number navigation and `simplePaginate()` for lightweight previous/next.
+
+#### Length-Aware Pagination (paginate)
+
+```javascript
+// In a controller
+async index(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const users = await User.where('active', true).paginate(15, page);
+
+    // For API responses
+    return res.json(users.toArray());
+    // Returns: { data: [...], meta: { current_page, last_page, per_page, total } }
+
+    // For views — render pagination links as HTML
+    return res.view('users.index', {
+        users: users.items,
+        paginationLinks: users.links('/users?')
+    });
+}
+```
+
+```html
+<!-- In your Edge template -->
+@foreach(users as user)
+    <div>{{ user.name }}</div>
+@endforeach
+
+{{{ paginationLinks }}}
+```
+
+#### Simple Pagination (simplePaginate)
+
+For large datasets where you don't need the total count:
+
+```javascript
+async index(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const users = await User.simplePaginate(15, page);
+
+    return res.view('users.index', {
+        users: users.items,
+        paginationLinks: users.links('/users?')
+    });
+}
+```
+
+#### Pagination Methods
+
+| Method | Description |
+|---|---|
+| `paginate(perPage, page)` | Full pagination with total count and page numbers |
+| `simplePaginate(perPage, page)` | Lightweight previous/next only |
+| `.items` | The array of items for the current page |
+| `.total` | Total number of records (paginate only) |
+| `.currentPage` | Current page number |
+| `.lastPage` | Last page number (paginate only) |
+| `.hasMorePages()` | Whether more pages exist |
+| `.toArray()` | Returns `{ data, meta }` object for API responses |
+| `.links(path)` | Renders Bootstrap-compatible pagination HTML |
+
+---
+
+### Queues
+
+LaraNode includes a database-driven queue system for processing jobs in the background, similar to Laravel.
+
+#### Creating a Job
+
+Create job classes in `app/Jobs/`:
+
+```javascript
+const Job = use('laranode/Queue/Job');
+
+class ProcessPodcast extends Job {
+    constructor(data) {
+        super(data);
+    }
+
+    async handle() {
+        console.log('Processing podcast:', this.data.podcastId);
+        // Your job logic here...
+    }
+}
+
+module.exports = ProcessPodcast;
+```
+
+#### Dispatching Jobs
+
+```javascript
+const ProcessPodcast = use('App/Jobs/ProcessPodcast');
+
+// Basic dispatch
+await ProcessPodcast.dispatch({ podcastId: 1 });
+
+// Dispatch with delay (in seconds)
+await ProcessPodcast.dispatch({ podcastId: 1 }).delay(600); // 10 minutes
+
+// Dispatch to a specific queue
+await ProcessPodcast.dispatch({ podcastId: 1 }).onQueue('high');
+
+// Chained
+await ProcessPodcast.dispatch({ podcastId: 1 }).onQueue('high').delay(60);
+```
+
+#### Running the Queue Worker
+
+```bash
+# Process jobs on the default queue
+node artisan queue:work
+
+# Process a specific queue
+node artisan queue:work --queue=high
+
+# Customize sleep interval and max retries
+node artisan queue:work --sleep=1 --tries=5
+```
+
+#### Failed Jobs
+
+When a job exceeds the maximum number of attempts (`--tries`), it is automatically moved to the `failed_jobs` table with the exception trace, queue name, payload, and a UUID.
+
+#### Required Migrations
+
+Run `node artisan migrate` to create the `jobs` and `failed_jobs` tables.
+
+---
+
 ### Service Providers
 
 Register services in `config/app.js`:
@@ -671,7 +1112,7 @@ Visit `/logs` to view application logs with:
 
 ### Artisan CLI
 
-The LaraNode Artisan CLI provides commands for scaffolding, database management, and running your application. 
+The LaraNode Artisan CLI provides commands for scaffolding, database management, and running your application.
 
 ```bash
 # Start the development server
@@ -710,6 +1151,7 @@ Here is a full list of available Artisan commands:
 | `db:seed` | Seed the database with records | `node artisan db:seed [options]` |
 | **System** | | |
 | `schedule:run` | Run the scheduled commands | `node artisan schedule:run` |
+| `queue:work` | Start processing jobs on the queue | `node artisan queue:work [options]` |
 | `help` | Display help for a specific command | `node artisan help [command]` |
 
 *Note: You can run `node artisan help <command>` for more detailed usage and available options for any specific command.*

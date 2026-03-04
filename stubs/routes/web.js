@@ -3,8 +3,23 @@ const Log = use('laranode/Support/Facades/Log');
 
 const path = require('path');
 
+const Http = use('laranode/Support/Facades/Http');
+
 Route.get('/', (req, res) => {
     return res.redirect('/login');
+});
+
+Route.get('/test-macro', async (req, res) => {
+    try {
+        const response = await Http.typicode().get('/todos/1');
+        res.json({
+            status: response.status(),
+            headers: response.headers(),
+            body: response.json()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message, stack: error.stack });
+    }
 });
 
 Route.get('/docs', 'DocsController@index').name('docs');

@@ -1,3 +1,5 @@
+const JoinClause = require('./JoinClause');
+
 class Builder {
     constructor(connection, table) {
         this.connection = connection;
@@ -144,22 +146,55 @@ class Builder {
 
     // ─── Joins ────────────────────────────────────────────
 
-    join(table, first, operator, second, type = 'inner') {
-        this.components.joins.push({ table, first, operator, second, type });
+    join(table, first, operator = null, second = null, type = 'inner') {
+        if (typeof first === 'function') {
+            const joinClause = new JoinClause();
+            first(joinClause);
+            this.components.joins.push({ table, joinClause, type });
+            // Merge any value-based bindings from the JoinClause
+            this.bindings.join.push(...joinClause.getBindings());
+        } else {
+            this.components.joins.push({ table, first, operator, second, type });
+        }
         return this;
     }
 
-    leftJoin(table, first, operator, second) {
+    leftJoin(table, first, operator = null, second = null) {
         return this.join(table, first, operator, second, 'left');
     }
 
-    rightJoin(table, first, operator, second) {
+    rightJoin(table, first, operator = null, second = null) {
         return this.join(table, first, operator, second, 'right');
     }
 
     crossJoin(table) {
         this.components.joins.push({ table, type: 'cross' });
         return this;
+    }
+
+    joinSub(query, alias, first, operator = null, second = null, type = 'inner') {
+        // If query is a closure, execute it to get a Builder
+        if (typeof query === 'function') {
+            const subQuery = new Builder(this.connection, '');
+            query(subQuery);
+            query = subQuery;
+        }
+
+        // Compile the subquery and merge its bindings
+        const subSql = query.toSql();
+        this.bindings.join.push(...query.getBindings());
+
+        // Wrap as (SELECT ...) as alias
+        const table = `(${subSql}) as ${alias}`;
+        return this.join(table, first, operator, second, type);
+    }
+
+    leftJoinSub(query, alias, first, operator = null, second = null) {
+        return this.joinSub(query, alias, first, operator, second, 'left');
+    }
+
+    rightJoinSub(query, alias, first, operator = null, second = null) {
+        return this.joinSub(query, alias, first, operator, second, 'right');
     }
 
     // ─── Grouping ─────────────────────────────────────────
@@ -273,7 +308,10 @@ class Builder {
             if (join.type === 'cross') {
                 return `CROSS JOIN ${join.table}`;
             }
-            return `${join.type.toUpperCase()} JOIN ${join.table} ON ${join.first} ${join.operator} ${join.second}`;
+            const onClause = join.joinClause
+                ? join.joinClause.compile()
+                : `${join.first} ${join.operator} ${join.second}`;
+            return `${join.type.toUpperCase()} JOIN ${join.table} ON ${onClause}`;
         }).join(' ');
     }
 

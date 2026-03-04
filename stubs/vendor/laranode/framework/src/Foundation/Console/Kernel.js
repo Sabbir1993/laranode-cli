@@ -30,6 +30,7 @@ class Kernel {
             require('../../Database/Console/MigrateFreshCommand'),
             require('../../Database/Console/SeedCommand'),
             require('../../Console/Commands/ScheduleRunCommand'),
+            require('../../Queue/Console/QueueWorkCommand'),
         ];
 
         for (const commandClass of builtInCommands) {

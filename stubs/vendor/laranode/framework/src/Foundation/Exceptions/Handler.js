@@ -95,15 +95,20 @@ class Handler {
             message = `The ${modelName.toLowerCase()} you're looking for could not be found.`;
         }
 
-        // Try to load the custom error template
-        const viewPath = path.join(process.cwd(), 'resources', 'views', 'errors', `${statusCode}.html`);
+        // Try to load the error template
+        // 1. Check app's custom error views first (allows user overrides)
+        const appViewPath = path.join(process.cwd(), 'resources', 'views', 'errors', `${statusCode}.html`);
+        // 2. Fallback to vendor's built-in error views
+        const vendorViewPath = path.join(__dirname, 'resources', 'views', 'errors', `${statusCode}.html`);
+
+        const viewPath = fs.existsSync(appViewPath) ? appViewPath : vendorViewPath;
 
         try {
             let html = fs.readFileSync(viewPath, 'utf-8');
             html = html.replace('{{message}}', message);
             return res.status(statusCode).send(html);
         } catch (e) {
-            // Fallback if template not found
+            // Fallback if no template found
             return res.status(statusCode).send(
                 `<h1>${statusCode} - ${this.getErrorTitle(statusCode)}</h1><p>${message}</p>`
             );

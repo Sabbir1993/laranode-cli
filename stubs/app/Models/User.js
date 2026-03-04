@@ -21,6 +21,7 @@ class User extends HasApiTokens(Model) {
         const Todo = use('App/Models/Todo');
         return this.hasMany(Todo, 'user_id');
     }
+
 }
 
 module.exports = User;

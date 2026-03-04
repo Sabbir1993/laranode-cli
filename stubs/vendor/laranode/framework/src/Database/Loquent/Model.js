@@ -991,6 +991,40 @@ class Model {
 
     // ─── Eager Loading ────────────────────────────────────
 
+    /**
+     * Eagerly load relations on this model instance (force reload).
+     * Use this in controllers before passing the model to a view.
+     *
+     * @param {...string} relations - Relation names to load
+     * @returns {Promise<this>}
+     *
+     * @example
+     *   const user = await User.find(1);
+     *   await user.load('posts', 'roles');
+     *   return res.view('users.show', { user });
+     */
+    async load(...relations) {
+        for (const relation of relations) {
+            if (typeof this[relation] === 'function') {
+                const rel = this[relation]();
+                if (rel && typeof rel.getResults === 'function') {
+                    this.relations[relation] = await rel.getResults();
+                } else if (rel && typeof rel.get === 'function') {
+                    this.relations[relation] = await rel.get();
+                } else if (rel && typeof rel.first === 'function') {
+                    this.relations[relation] = await rel.first();
+                }
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Load relations only if they haven't been loaded yet.
+     *
+     * @param {...string} relations - Relation names to load
+     * @returns {Promise<this>}
+     */
     async loadMissing(...relations) {
         for (const relation of relations) {
             if (this.relations[relation] === undefined && typeof this[relation] === 'function') {
