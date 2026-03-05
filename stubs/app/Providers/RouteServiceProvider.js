@@ -1,7 +1,7 @@
 const ServiceProvider = use('laranode/Support/ServiceProvider');
 const path = require('path');
 
-class RouteServiceProvider extends ServiceProvider {
+class AppRouteServiceProvider extends ServiceProvider {
     /**
      * The path to the "home" route for your application.
      * This is used by LaraNode authentication to redirect users after login.
@@ -76,4 +76,4 @@ class RouteServiceProvider extends ServiceProvider {
     }
 }
 
-module.exports = RouteServiceProvider;
+module.exports = AppRouteServiceProvider;
