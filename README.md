@@ -59,7 +59,7 @@ node server.js
 |---|---|
 | 🏛️ **Laravel Architecture** | Familiar directory structure — `app/`, `routes/`, `config/`, `resources/`, `database/` |
 | 🧩 **Service Container** | Powerful IoC container with dependency injection and service providers |
-| 🛣️ **Expressive Routing** | Route groups, middleware, prefixes, named routes, and resource controllers |
+| 🛣️ **Expressive Routing** | Route groups, middleware, prefixes, named routes, and **resource controllers** |
 | 🗄️ **Loquent ORM** | Active Record ORM with relationships, eager loading, soft deletes, and query builder |
 | ✨ **Edge Templates** | Blade-like templating engine with layouts, partials, and directives |
 | 🛡️ **Authentication** | Session-based auth & Sanctum-style API tokens out of the box |
@@ -72,6 +72,14 @@ node server.js
 | 🗃️ **Multi-Database** | SQLite and MySQL support with connection pooling |
 | 📄 **Pagination** | Built-in query pagination with page metadata and HTML links |
 | 📮 **Queues** | Database-driven job queue with dispatch, delay, retries, and failed jobs |
+| 🎧 **Events & Listeners** | App-wide event dispatching with listener DI resolution |
+| 🚀 **Cache** | Unified cache API with file and memory drivers (`Cache.remember`) |
+| 📁 **Storage** | Unified filesystem API (`Storage.put`) with visibility, mime-type, and symbolic links |
+| 📩 **Mail** | Fluent email sending API via Mailables with automatic queuing support |
+| 🔔 **Notifications** | Multi-channel notifications routing (Mail, Database, Broadcast) with `Notifiable` trait |
+| 📡 **Broadcasting** | Real-time event broadcasting via Socket.io with `ShouldBroadcast` trait |
+| 🧪 **Testing** | Robust testing framework with `artisan test` and HTTP assertions |
+| ⚡ **Performance** | Route and Config caching for production optimization (`node artisan route:cache`) |
 
 ---
 
@@ -379,6 +387,20 @@ await User.where('id', 1).decrement('balance', 50);
 
 // Truncate table
 await DB.table('logs').truncate();
+
+#### Database Transactions
+
+LaraNode's DB facade provides a simple way to run a set of operations within a database transaction. If an exception is thrown within the closure, the transaction is automatically rolled back.
+
+```javascript
+await DB.transaction(async () => {
+    await DB.table('users').update({ votes: 1 });
+    await DB.table('posts').delete();
+
+    // Loquent models automatically use the active transaction
+    await User.create({ name: 'Transaction User' });
+});
+```
 ```
 
 #### Chunking & Pagination
@@ -443,6 +465,9 @@ await user.roles().toggle([2, 4]);
 const users = await User.with('posts').get();
 const users = await User.with('posts', 'roles').get();
 const user  = await User.with('posts:id,title').find(1);       // Select specific columns
+
+// Nested Eager Loading (dot notation)
+const users = await User.with('posts.comments.author').get();
 
 // Querying relationship existence
 const users = await User.has('posts').get();
@@ -805,9 +830,9 @@ LaraNode uses Edge templates (`.edge` files) — a Blade-like engine:
 @section('title', 'Home')
 
 @section('content')
-    <h1>Welcome, {{ user.name }}!</h1>
+    <h1>Welcome, {{ auth.user.name }}!</h1>
 
-    @if(user.isAdmin)
+    @if(auth.user.isAdmin)
         <p>Admin Panel</p>
     @endif
 
@@ -1031,6 +1056,66 @@ Run `node artisan migrate` to create the `jobs` and `failed_jobs` tables.
 
 ---
 
+### Broadcasting
+
+Powered by Socket.io, LaraNode's broadcasting allows you to share server-side events with your client-side JavaScript application in real-time.
+
+```javascript
+// app/Events/OrderShipped.js
+class OrderShipped extends ShouldBroadcast {
+    constructor(order) {
+        super();
+        this.order = order;
+    }
+
+    broadcastOn() {
+        return ['orders', `user.${this.order.user_id}`];
+    }
+}
+
+// In your controller
+Event.dispatch(new OrderShipped(order));
+```
+
+---
+
+### Testing
+
+LaraNode features a robust testing framework inspired by Laravel. It supports `artisan test` and provides a `TestCase` class for building expressive feature tests.
+
+```javascript
+// tests/Feature/UserTest.js
+const TestCase = use('laranode/Foundation/Testing/TestCase');
+
+class UserTest extends TestCase {
+    async test_can_visit_home_page() {
+        const response = await this.get('/');
+        response.assertStatus(200);
+        response.assertSee('LaraNode');
+    }
+}
+```
+
+#### Running Tests
+
+```bash
+node artisan test
+```
+
+---
+
+### Performance
+
+Optimize your application for production by caching performance-heavy components.
+
+```bash
+# Cache configuration
+node artisan config:cache
+
+# Cache routes
+node artisan route:cache
+```
+
 ### Service Providers
 
 Register services in `config/app.js`:
@@ -1142,6 +1227,10 @@ Here is a full list of available Artisan commands:
 | `make:seeder` | Create a new seeder class | `node artisan make:seeder <name>` |
 | `make:request` | Create a new form request class | `node artisan make:request <name>` |
 | `make:resource` | Create a new API resource class | `node artisan make:resource [options] <name>` |
+| `make:event` | Create a new event class | `node artisan make:event <name>` |
+| `make:listener` | Create a new event listener class | `node artisan make:listener <name>` |
+| `make:mail` | Create a new mailable class | `node artisan make:mail <name>` |
+| `make:notification`| Create a new notification class | `node artisan make:notification <name>` |
 | `make:command` | Create a new Artisan command | `node artisan make:command <name>` |
 | `make:rule` | Create a new custom validation rule class | `node artisan make:rule <name>` |
 | **Database** | | |
@@ -1155,6 +1244,163 @@ Here is a full list of available Artisan commands:
 | `help` | Display help for a specific command | `node artisan help [command]` |
 
 *Note: You can run `node artisan help <command>` for more detailed usage and available options for any specific command.*
+
+---
+
+### Events & Listeners
+
+LaraNode provides a robust event dispatching system similar to Laravel. Listeners are automatically resolved through the service container.
+
+```javascript
+const Event = use('laranode/Support/Facades/Event');
+
+// Dispatch an event
+Event.dispatch('OrderShipped', order);
+
+// Listen to an event
+Event.listen('OrderShipped', SendShipmentNotification);
+```
+
+Register your listeners in `app/Providers/EventServiceProvider.js`.
+
+---
+
+### Cache
+
+The LaraNode Cache system provides a unified API for various cache drivers. Currently supported drivers: `file` and `memory`.
+
+```javascript
+const Cache = use('laranode/Support/Facades/Cache');
+
+// Store an item
+await Cache.put('key', 'value', 60);
+
+// Retrieve an item
+const value = await Cache.get('key');
+
+// Retrieve & store if empty
+const users = await Cache.remember('users', 60, async () => {
+    return await DB.table('users').get();
+});
+```
+
+---
+
+### Storage / Filesystem
+
+LaraNode provides a powerful filesystem abstraction matching Laravel's Storage API.
+
+```javascript
+const Storage = use('laranode/Support/Facades/Storage');
+
+// Store a file with visibility
+await Storage.put('avatars/1.jpg', fileData, 'public');
+
+// Get URL (requires storage:link)
+const url = Storage.url('avatars/1.jpg'); // '/storage/avatars/1.jpg'
+
+// Get Mime Type
+const type = await Storage.mimeType('document.pdf'); // 'application/pdf'
+
+// Create symbolic link
+// node artisan storage:link
+
+// Read a file
+const contents = await Storage.get('file.txt');
+
+// Delete a file
+await Storage.delete('file.txt');
+
+// Verify existence
+if (await Storage.exists('file.txt')) { ... }
+
+#### File Uploads
+
+LaraNode provides a convenient wrapper for uploaded files with a Laravel-compatible API.
+
+```javascript
+async upload(req, res) {
+    const file = req.file('avatar'); // Returns UploadedFile instance
+
+    if (file) {
+        // Get file info
+        const name = file.getClientOriginalName();
+        const ext  = file.getClientOriginalExtension();
+        const size = file.getSize();
+
+        // Store the file (returns the generated path)
+        const path = await file.store('avatars');
+        
+        return res.json({ path });
+    }
+}
+```
+```
+
+---
+
+### Mail
+
+LaraNode's Mail system, built on top of Nodemailer, allows for expressive email creation via Mailable classes.
+
+```javascript
+const Mail = use('laranode/Support/Facades/Mail');
+
+// Send a mailable
+await Mail.to(user.email).send(new WelcomeMail(user));
+
+// If Mailable implements ShouldQueue, it's sent in the background automatically!
+class WelcomeMail extends Mailable implements ShouldQueue { ... }
+```
+
+```javascript
+// A sample Mailable class
+class WelcomeMail extends Mailable {
+    constructor(user) { super(); this.user = user; }
+    build() {
+        return this.from('admin@app.com')
+                   .subject('Welcome!')
+                   .view('emails.welcome', { user: this.user });
+    }
+}
+```
+
+---
+
+### Notifications
+
+LaraNode allows you to send notifications across various channels (Mail, Database).
+
+```javascript
+// Notify an entity
+await Notification.send(user, new InvoicePaid(invoice));
+```
+
+```javascript
+// A sample Notification class
+class InvoicePaid extends Notification {
+    via(notifiable) { return ['mail', 'database']; }
+
+    toMail(notifiable) {
+        return new MailMessage()
+            .greeting('Hello!')
+            .line('Your invoice has been paid.')
+            .action('View Invoice', invoice.url);
+    }
+
+    toDatabase(notifiable) {
+        return { invoice_id: this.invoice.id };
+    }
+
+    toBroadcast(notifiable) {
+        return { amount: this.invoice.total };
+    }
+}
+
+// Any model can receive notifications using the Notifiable mixin
+class User extends Notifiable(Model) { ... }
+await user.notify(new InvoicePaid(invoice));
+```
 
 ---
 

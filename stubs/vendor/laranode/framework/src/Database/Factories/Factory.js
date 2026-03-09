@@ -1,56 +1,95 @@
+const { faker } = require('@faker-js/faker');
+
 class Factory {
-    constructor(model) {
-        this.model = model;
-        this.states = {};
+    constructor(modelClass = null) {
+        this.faker = faker;
+        this._count = 1;
+        this.states = [];
+        // Support explicit constructors via inheritance OR dynamic injection via HasFactory trait
+        this.targetModel = modelClass || this.model();
+    }
+
+    /**
+     * Set the amount of models you wish to create / make.
+     */
+    count(num) {
+        this._count = num;
+        return this;
+    }
+
+    /**
+     * Add a new state transformation to the model definition.
+     */
+    state(callback) {
+        this.states.push(callback);
+        return this;
+    }
+
+    /**
+     * Create a collection of models and persist them to the database.
+     */
+    async create(attributes = {}) {
+        let results = await this.make(attributes);
+        return this.store(results);
+    }
+
+    /**
+     * Create a collection of models without persisting them to the database.
+     */
+    async make(attributes = {}) {
+        const items = [];
+        for (let i = 0; i < this._count; i++) {
+            let definition = this.definition();
+
+            // apply states
+            for (const stateCallback of this.states) {
+                definition = { ...definition, ...stateCallback(definition) };
+            }
+
+            // apply overrides
+            definition = { ...definition, ...attributes };
+
+            items.push(new this.targetModel(definition));
+        }
+
+        if (this._count === 1) {
+            return items[0];
+        }
+
+        const Collection = use('laranode/Support/Collection');
+        return new Collection(items);
+    }
+
+    /**
+     * Store the constructed models into the database.
+     */
+    async store(results) {
+        if (Array.isArray(results) || (results.constructor && results.constructor.name === 'Collection')) {
+            const arr = results.items || results;
+            for (const item of arr) {
+                await item.save();
+            }
+            return results;
+        }
+
+        await results.save();
+        return results;
     }
 
     /**
      * Define the model's default state.
-     * @returns {Object}
+     * Must be implemented by child classes.
      */
     definition() {
         return {};
     }
 
     /**
-     * Create multiple instances of the model.
-     * @param {number} count 
+     * The model that this factory corresponds to.
      */
-    count(count) {
-        this._count = count;
-        return this;
-    }
-
-    /**
-     * Make fake data objects (without saving)
-     * @param {Object} attributes 
-     */
-    make(attributes = {}) {
-        const count = this._count || 1;
-        const results = [];
-
-        for (let i = 0; i < count; i++) {
-            const data = { ...this.definition(), ...attributes };
-            results.push(new this.model(data));
-        }
-
-        return count === 1 ? results[0] : results;
-    }
-
-    /**
-     * Create models and save to database
-     * @param {Object} attributes 
-     */
-    create(attributes = {}) {
-        const count = this._count || 1;
-        const results = [];
-
-        for (let i = 0; i < count; i++) {
-            const data = { ...this.definition(), ...attributes };
-            results.push(this.model.create(data));
-        }
-
-        return count === 1 ? results[0] : results;
+    model() {
+        if (this.targetModel) return this.targetModel;
+        throw new Error('Factory must specify target Model class or override model() method');
     }
 }
 

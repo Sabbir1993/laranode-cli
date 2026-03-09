@@ -1,3 +1,7 @@
+const SessionGuard = require('./SessionGuard');
+const config = global.config; // Use the global helper
+const use = global.use;
+
 class AuthManager {
     constructor(app) {
         this.app = app;
@@ -71,16 +75,8 @@ class AuthManager {
      * Create a session based authentication guard.
      */
     createSessionDriver(name, configData) {
-        // Mock session driver for MVP
         const provider = this.createUserProvider(configData.provider);
-        return {
-            check: () => false,
-            guest: () => true,
-            user: () => null,
-            id: () => null,
-            validate: () => false,
-            setUser: () => { }
-        };
+        return new SessionGuard(name, provider);
     }
 
     /**

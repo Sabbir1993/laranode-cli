@@ -7,7 +7,23 @@ class RouteServiceProvider extends ServiceProvider {
      */
     register() {
         this.app.singleton('router', function (app) {
-            return new Router(app);
+            const RouterClass = require('../../Routing/Router');
+            const router = new RouterClass(app);
+
+            if (typeof base_path === 'function') {
+                const fs = require('fs');
+                const cacheFile = base_path('bootstrap/cache/routes.json');
+                if (fs.existsSync(cacheFile)) {
+                    try {
+                        const routes = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+                        router.routes = routes;
+                        router.routesAreCached = true;
+                    } catch (e) {
+                        // ignore broken cache
+                    }
+                }
+            }
+            return router;
         });
     }
 

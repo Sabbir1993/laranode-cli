@@ -674,15 +674,39 @@ class Model {
     /**
      * Load a single relation onto an array of model instances.
      * Optionally select specific columns from the related model.
+     * Supports dot notation for nested relations (e.g. 'items.product').
      */
     static async _eagerLoadRelation(models, relationName, columns = null) {
+        if (!models || models.length === 0) return;
+
+        if (relationName.includes('.')) {
+            const parts = relationName.split('.');
+            const currentRel = parts[0];
+            const remainingRel = parts.slice(1).join('.');
+
+            // First load the first level relation
+            await this._eagerLoadRelation(models, currentRel);
+
+            // Then recursively load for the nested levels
+            for (const model of models) {
+                const related = model.relations[currentRel];
+                if (related) {
+                    const relatedArray = Array.isArray(related) ? related : [related];
+                    if (relatedArray.length > 0) {
+                        const RelatedModelClass = relatedArray[0].constructor;
+                        await RelatedModelClass._eagerLoadRelation(relatedArray, remainingRel, columns);
+                    }
+                }
+            }
+            return;
+        }
+
         for (const model of models) {
             if (typeof model[relationName] === 'function') {
                 const rel = model[relationName]();
 
                 // Apply column selection if specified
                 if (columns && rel && typeof rel.select === 'function') {
-                    // Always include the foreign key so the relation works
                     rel.select(...columns);
                 }
 
@@ -795,6 +819,22 @@ class Model {
 
     static oldest(column = 'created_at') {
         return this.query().oldest(column);
+    }
+
+    static select(...columns) {
+        return this.query().select(...columns);
+    }
+
+    static orderBy(column, direction = 'asc') {
+        return this.query().orderBy(column, direction);
+    }
+
+    static limit(value) {
+        return this.query().limit(value);
+    }
+
+    static offset(value) {
+        return this.query().offset(value);
     }
 
     static pluck(column, key = null) {

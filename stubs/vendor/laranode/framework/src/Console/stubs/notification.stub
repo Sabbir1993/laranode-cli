@@ -1,0 +1,49 @@
+const Notification = use('laranode/Notifications/Notification');
+const MailMessage = use('laranode/Notifications/MailMessage');
+
+class {{CLASS_NAME}} extends Notification {
+    /**
+     * Create a new notification instance.
+     */
+    constructor() {
+        super();
+        //
+    }
+
+    /**
+     * Get the notification's delivery channels.
+     *
+     * @param {Object} notifiable
+     * @returns {string[]}
+     */
+    via(notifiable) {
+        return ['mail'];
+    }
+
+    /**
+     * Get the mail representation of the notification.
+     *
+     * @param {Object} notifiable
+     * @returns {MailMessage}
+     */
+    toMail(notifiable) {
+        return new MailMessage()
+            .line('The introduction to the notification.')
+            .action('Notification Action', '/')
+            .line('Thank you for using our application!');
+    }
+
+    /**
+     * Get the array representation of the notification.
+     *
+     * @param {Object} notifiable
+     * @returns {Object}
+     */
+    toArray(notifiable) {
+        return {
+            //
+        };
+    }
+}
+
+module.exports = {{CLASS_NAME}};

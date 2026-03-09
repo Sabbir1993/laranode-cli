@@ -1,0 +1,20 @@
+const TestCase = use('laranode/Foundation/Testing/TestCase');
+
+describe('{{ class }}', function () {
+    let app;
+
+    before(async function () {
+        app = new TestCase();
+        await app.setUp();
+    });
+
+    after(async function () {
+        await app.tearDown();
+    });
+
+    it('returns a successful response', async function () {
+        const response = await app.get('/');
+        
+        app.expect(response.status).to.equal(200);
+    });
+});

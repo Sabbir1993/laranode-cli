@@ -1,0 +1,26 @@
+/**
+ * Mailable class
+ */
+const Mailable = use('laranode/Mail/Mailable');
+
+class {{CLASS_NAME}} extends Mailable {
+    /**
+     * Create a new message instance.
+     */
+    constructor() {
+        super();
+        //
+    }
+
+    /**
+     * Build the message.
+     *
+     * @returns {Mailable}
+     */
+    build() {
+        return this.view('emails.name')
+                   .subject('{{CLASS_NAME}}');
+    }
+}
+
+module.exports = {{CLASS_NAME}};

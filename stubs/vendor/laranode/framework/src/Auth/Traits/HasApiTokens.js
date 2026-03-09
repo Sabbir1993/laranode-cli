@@ -19,7 +19,8 @@ const HasApiTokens = (Base) => class extends Base {
     async createToken(name, abilities = ['*']) {
         const plainTextToken = crypto.randomBytes(40).toString('hex');
         const config = use('laranode/Support/Facades/Config');
-        const shouldHash = config.get('auth.guards.api.hash_tokens', true);
+        const hashConfig = config.get('auth.guards.api.hash_tokens');
+        const shouldHash = hashConfig === undefined ? true : hashConfig;
         const storedToken = shouldHash
             ? crypto.createHash('sha256').update(plainTextToken).digest('hex')
             : plainTextToken;

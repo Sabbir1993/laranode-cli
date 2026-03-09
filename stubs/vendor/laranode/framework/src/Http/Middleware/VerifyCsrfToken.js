@@ -51,10 +51,11 @@ class VerifyCsrfToken {
             token = cookies['XSRF-TOKEN'] || null;
         }
 
-        // Verify CSRF token for state-changing requests
         if (!sessionToken || token !== sessionToken) {
             console.log('[CSRF] Token mismatch!', { sessionToken, token });
-            return res.status(419).json({ message: 'CSRF token mismatch.' });
+            const error = new Error('TokenMismatchException: CSRF token mismatch.');
+            error.status = 419;
+            throw error;
         }
 
         return next(context);

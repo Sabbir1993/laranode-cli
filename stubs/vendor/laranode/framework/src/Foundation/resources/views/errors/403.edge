@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>419 — Page Expired</title>
+    <title>403 — Forbidden</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <style>
@@ -33,9 +33,9 @@
             position: fixed;
             inset: 0;
             background:
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(40, 200, 200, 0.2), transparent),
-                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(20, 180, 160, 0.12), transparent),
-                radial-gradient(ellipse 50% 50% at 20% 80%, rgba(60, 220, 200, 0.08), transparent);
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 60, 60, 0.2), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255, 100, 40, 0.12), transparent),
+                radial-gradient(ellipse 50% 50% at 20% 80%, rgba(255, 40, 80, 0.08), transparent);
             z-index: 0;
         }
 
@@ -69,7 +69,7 @@
         .orb-1 {
             width: 300px;
             height: 300px;
-            background: rgba(40, 200, 200, 0.25);
+            background: rgba(255, 60, 60, 0.25);
             top: -100px;
             right: -50px;
         }
@@ -77,7 +77,7 @@
         .orb-2 {
             width: 250px;
             height: 250px;
-            background: rgba(20, 180, 160, 0.18);
+            background: rgba(255, 100, 40, 0.18);
             bottom: -80px;
             left: -40px;
             animation-delay: -3s;
@@ -86,7 +86,7 @@
         .orb-3 {
             width: 200px;
             height: 200px;
-            background: rgba(60, 220, 200, 0.12);
+            background: rgba(255, 40, 80, 0.12);
             top: 50%;
             left: 60%;
             animation-delay: -5s;
@@ -108,8 +108,8 @@
             width: 80px;
             height: 80px;
             margin: 0 auto 24px;
-            background: rgba(40, 200, 200, 0.1);
-            border: 2px solid rgba(40, 200, 200, 0.2);
+            background: rgba(255, 60, 60, 0.1);
+            border: 2px solid rgba(255, 60, 60, 0.2);
             border-radius: 20px;
             display: flex;
             align-items: center;
@@ -120,18 +120,18 @@
         .icon svg {
             width: 40px;
             height: 40px;
-            fill: #28c8c8;
+            fill: #ff3c3c;
         }
 
         @keyframes pulse {
 
             0%,
             100% {
-                box-shadow: 0 0 0 0 rgba(40, 200, 200, 0.2);
+                box-shadow: 0 0 0 0 rgba(255, 60, 60, 0.2);
             }
 
             50% {
-                box-shadow: 0 0 30px 10px rgba(40, 200, 200, 0.1);
+                box-shadow: 0 0 30px 10px rgba(255, 60, 60, 0.1);
             }
         }
 
@@ -141,7 +141,7 @@
             letter-spacing: -6px;
             line-height: 1;
             margin-bottom: 20px;
-            background: linear-gradient(135deg, #28c8c8 0%, #14b4a0 50%, #3cdcc8 100%);
+            background: linear-gradient(135deg, #ff3c3c 0%, #ff6428 50%, #ff2850 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -150,13 +150,13 @@
 
         .error-code::before,
         .error-code::after {
-            content: '419';
+            content: '403';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #28c8c8 0%, #14b4a0 50%, #3cdcc8 100%);
+            background: linear-gradient(135deg, #ff3c3c 0%, #ff6428 50%, #ff2850 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -212,7 +212,7 @@
         .divider {
             width: 80px;
             height: 4px;
-            background: linear-gradient(90deg, #28c8c8, #14b4a0);
+            background: linear-gradient(90deg, #ff3c3c, #ff6428);
             border-radius: 4px;
             margin: 0 auto 28px;
         }
@@ -255,14 +255,14 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #28c8c8, #14b4a0);
+            background: linear-gradient(135deg, #ff3c3c, #e02020);
             color: #fff;
-            box-shadow: 0 4px 20px rgba(40, 200, 200, 0.35);
+            box-shadow: 0 4px 20px rgba(255, 60, 60, 0.35);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(40, 200, 200, 0.5);
+            box-shadow: 0 8px 30px rgba(255, 60, 60, 0.5);
         }
 
         .btn-secondary {
@@ -295,7 +295,7 @@
             position: absolute;
             width: 3px;
             height: 3px;
-            background: rgba(40, 200, 200, 0.15);
+            background: rgba(255, 60, 60, 0.15);
             border-radius: 50%;
             animation: rise linear infinite;
         }
@@ -387,21 +387,14 @@
         <div class="icon">
             <svg viewBox="0 0 24 24">
                 <path
-                    d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-2h2v2h-2zm0-4V7h2v6h-2z" />
             </svg>
         </div>
-        <div class="error-code">419</div>
+        <div class="error-code">403</div>
         <div class="divider"></div>
-        <h1 class="title">Page Expired</h1>
+        <h1 class="title">Access Forbidden</h1>
         <p class="message">{{message}}</p>
         <div class="actions">
-            <a href="javascript:location.reload()" class="btn btn-primary">
-                <svg viewBox="0 0 24 24">
-                    <path
-                        d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-                </svg>
-                Refresh Page
-            </a>
             <button onclick="history.back()" class="btn btn-secondary">
                 <svg viewBox="0 0 24 24">
                     <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />

@@ -56,6 +56,42 @@ class MysqlConnector {
             this.pool = null;
         }
     }
+
+    async beginTransaction() {
+        const pool = await this.connect();
+        const connection = await pool.getConnection(); // Get dedicated connection
+        await connection.beginTransaction();
+
+        return {
+            query: async (sql, bindings = []) => {
+                try {
+                    const [rows] = await connection.execute(sql, bindings);
+
+                    if (sql.trim().toUpperCase().startsWith('SELECT')) return rows;
+                    if (sql.trim().toUpperCase().startsWith('INSERT')) {
+                        return { changes: rows.affectedRows, lastInsertRowid: rows.insertId };
+                    }
+                    return { changes: rows.affectedRows || 0 };
+                } catch (error) {
+                    throw new Error(`MySQL Transaction Error: ${error.message} \nQuery: ${sql}`);
+                }
+            },
+            commit: async () => {
+                try {
+                    await connection.commit();
+                } finally {
+                    connection.release();
+                }
+            },
+            rollBack: async () => {
+                try {
+                    await connection.rollback();
+                } finally {
+                    connection.release();
+                }
+            }
+        };
+    }
 }
 
 module.exports = MysqlConnector;

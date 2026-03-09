@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const Response = require('../../Http/Response');
 
 class Handler {
     constructor(app) {
@@ -97,22 +98,36 @@ class Handler {
 
         // Try to load the error template
         // 1. Check app's custom error views first (allows user overrides)
-        const appViewPath = path.join(process.cwd(), 'resources', 'views', 'errors', `${statusCode}.html`);
-        // 2. Fallback to vendor's built-in error views
-        const vendorViewPath = path.join(__dirname, 'resources', 'views', 'errors', `${statusCode}.html`);
+        // We check for .edge first as it's the default, then .html
+        const appEdgePath = path.join(process.cwd(), 'resources', 'views', 'errors', `${statusCode}.edge`);
+        const appHtmlPath = path.join(process.cwd(), 'resources', 'views', 'errors', `${statusCode}.html`);
 
-        const viewPath = fs.existsSync(appViewPath) ? appViewPath : vendorViewPath;
+        // 2. Fallback to vendor's built-in error views
+        const vendorViewPath = path.join(__dirname, '..', 'resources', 'views', 'errors', `${statusCode}.edge`);
+
+        const response = res instanceof Response ? res : new Response(res);
 
         try {
-            let html = fs.readFileSync(viewPath, 'utf-8');
-            html = html.replace('{{message}}', message);
-            return res.status(statusCode).send(html);
+            if (fs.existsSync(appEdgePath)) {
+                return response.status(statusCode).view(`errors.${statusCode}`, { message });
+            }
+
+            if (fs.existsSync(appHtmlPath)) {
+                let html = fs.readFileSync(appHtmlPath, 'utf-8');
+                html = html.replace('{{message}}', message);
+                return response.status(statusCode).send(html);
+            }
+
+            if (fs.existsSync(vendorViewPath)) {
+                return response.status(statusCode).view(vendorViewPath, { message });
+            }
         } catch (e) {
-            // Fallback if no template found
-            return res.status(statusCode).send(
-                `<h1>${statusCode} - ${this.getErrorTitle(statusCode)}</h1><p>${message}</p>`
-            );
+            console.error('Error rendering error page:', e);
         }
+
+        return res.status(statusCode).send(
+            `<h1>${statusCode} - ${this.getErrorTitle(statusCode)}</h1><p>${message}</p>`
+        );
     }
 
     /**

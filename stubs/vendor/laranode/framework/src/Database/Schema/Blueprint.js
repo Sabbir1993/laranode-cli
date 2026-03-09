@@ -252,7 +252,9 @@ class Blueprint {
             if (col.isPrimary) def += ' PRIMARY KEY';
 
             if (col.isAutoIncrement) {
-                def += connectionDriver === 'mysql' ? ' AUTO_INCREMENT' : ' AUTOINCREMENT';
+                if (connectionDriver === 'mysql') def += ' AUTO_INCREMENT';
+                else if (connectionDriver === 'sqlite') def += ' AUTOINCREMENT';
+                // PostgreSQL handles auto-increment implicitly via SERIAL/BIGSERIAL types instead of an attribute keyword
             }
 
             if (!col.isNullable && !col.isPrimary) def += ' NOT NULL';
@@ -349,6 +351,31 @@ class Blueprint {
                 'BLOB': 'BLOB'
             };
             return `${name} ${sqliteMap[type] || type}`;
+        }
+
+        if (driver === 'pgsql') {
+            // PostgreSQL type mapping
+            const pgMap = {
+                'VARCHAR': `VARCHAR(${col.length || 255})`,
+                'LONGTEXT': 'TEXT',
+                'MEDIUMTEXT': 'TEXT',
+                'TEXT': 'TEXT',
+                'TINYINT': 'SMALLINT', // Postgres doesn't have TINYINT
+                'SMALLINT': col.isAutoIncrement ? 'SMALLSERIAL' : 'SMALLINT',
+                'INTEGER': col.isAutoIncrement ? 'SERIAL' : 'INTEGER',
+                'BIGINT': col.isAutoIncrement ? 'BIGSERIAL' : 'BIGINT',
+                'FLOAT': 'REAL',
+                'DOUBLE': 'DOUBLE PRECISION',
+                'DECIMAL': `DECIMAL(${col.precision || 8}, ${col.scale || 2})`,
+                'BOOLEAN': 'BOOLEAN',
+                'DATE': 'DATE',
+                'DATETIME': 'TIMESTAMP',
+                'TIME': 'TIME',
+                'JSON': 'JSONB',
+                'ENUM': `VARCHAR(${col.length || 255})`, // Simplest fallback without custom TYPE enum
+                'BLOB': 'BYTEA'
+            };
+            return `${name} ${pgMap[type] || type}`;
         }
 
         // MySQL

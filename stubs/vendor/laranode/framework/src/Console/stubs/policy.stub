@@ -1,0 +1,38 @@
+class DummyClass {
+    /**
+     * Determine whether the user can view any models.
+     */
+    viewAny(user) {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can view the model.
+     */
+    view(user, model) {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can create models.
+     */
+    create(user) {
+        return true;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    update(user, model) {
+        return user.id === model.user_id;
+    }
+
+    /**
+     * Determine whether the user can delete the model.
+     */
+    delete(user, model) {
+        return user.id === model.user_id;
+    }
+}
+
+module.exports = DummyClass;

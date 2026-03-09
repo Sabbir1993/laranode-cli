@@ -127,6 +127,90 @@ class Collection {
         return this;
     }
 
+    keyBy(key) {
+        const obj = {};
+        this.items.forEach(item => {
+            const groupKey = typeof key === 'function' ? key(item) : item[key];
+            obj[groupKey] = item;
+        });
+        return new Collection(obj);
+    }
+
+    flatten(depth = Infinity) {
+        return new Collection(this.items.flat(depth));
+    }
+
+    chunk(size) {
+        const chunks = [];
+        for (let i = 0; i < this.items.length; i += size) {
+            chunks.push(new Collection(this.items.slice(i, i + size)));
+        }
+        return new Collection(chunks);
+    }
+
+    whereIn(key, values) {
+        return new Collection(this.items.filter(item => values.includes(item[key])));
+    }
+
+    diff(items) {
+        const compareArray = items instanceof Collection ? items.items : items;
+        return new Collection(this.items.filter(i => !compareArray.includes(i)));
+    }
+
+    intersect(items) {
+        const compareArray = items instanceof Collection ? items.items : items;
+        return new Collection(this.items.filter(i => compareArray.includes(i)));
+    }
+
+    merge(items) {
+        const compareArray = items instanceof Collection ? items.items : items;
+        return new Collection([...this.items, ...compareArray]);
+    }
+
+    take(limit) {
+        if (limit < 0) {
+            return new Collection(this.items.slice(limit));
+        }
+        return new Collection(this.items.slice(0, limit));
+    }
+
+    skip(count) {
+        return new Collection(this.items.slice(count));
+    }
+
+    sum(callbackOrKey = null) {
+        return this.items.reduce((acc, item) => {
+            const val = callbackOrKey
+                ? (typeof callbackOrKey === 'function' ? callbackOrKey(item) : item[callbackOrKey])
+                : item;
+            return acc + (Number(val) || 0);
+        }, 0);
+    }
+
+    avg(callbackOrKey = null) {
+        const count = this.count();
+        if (count === 0) return 0;
+        return this.sum(callbackOrKey) / count;
+    }
+
+    max(callbackOrKey = null) {
+        if (this.isEmpty()) return null;
+        return Math.max(...this.items.map(item => {
+            return callbackOrKey
+                ? (typeof callbackOrKey === 'function' ? callbackOrKey(item) : item[callbackOrKey])
+                : item;
+        }));
+    }
+
+    min(callbackOrKey = null) {
+        if (this.isEmpty()) return null;
+        return Math.min(...this.items.map(item => {
+            return callbackOrKey
+                ? (typeof callbackOrKey === 'function' ? callbackOrKey(item) : item[callbackOrKey])
+                : item;
+        }));
+    }
+
     toArray() {
         return this.items;
     }

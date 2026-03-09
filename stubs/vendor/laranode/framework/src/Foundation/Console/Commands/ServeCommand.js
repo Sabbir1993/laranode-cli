@@ -17,14 +17,14 @@ class ServeCommand extends Command {
         // Auto-restart logic like nodemon if not production
         if (env !== 'production' && !process.env.LARANODE_WATCHER_ACTIVE) {
             this.info('Starting development server with auto-reload...');
-            this.info('Ignoring changes in: storage/, data/');
+            this.info('Ignoring changes in: storage/, public/');
 
             const artisanScript = path.join(process.cwd(), 'artisan');
             const argsList = [
                 'nodemon',
                 '--watch', process.cwd(),
                 '--ignore', 'storage/',
-                '--ignore', 'data/',
+                '--ignore', 'public/',
                 '--ext', 'js,json,html,css,md',
                 artisanScript,
                 'serve',

@@ -32,7 +32,8 @@ class Authenticate {
 
                     if (id && plainTextToken) {
                         const config = use('laranode/Support/Facades/Config');
-                        const shouldHash = config.get('auth.guards.api.hash_tokens', true);
+                        const hashConfig = config.get('auth.guards.api.hash_tokens');
+                        const shouldHash = hashConfig === undefined ? true : hashConfig;
                         const searchToken = shouldHash
                             ? crypto.createHash('sha256').update(plainTextToken).digest('hex')
                             : plainTextToken;
@@ -58,16 +59,30 @@ class Authenticate {
                     }
                 }
             }
-            // Session Authentication (mocked fallback)
+            // Session Authentication
             else {
                 if (authGuard.check()) {
+                    req.user = () => authGuard.user();
                     return next(context);
+                }
+
+                // Fallback to Session User ID
+                if (req.session && req.session.user_id) {
+                    const providerClass = authGuard.provider;
+                    if (providerClass) {
+                        const user = await providerClass.find(req.session.user_id);
+                        if (user) {
+                            authGuard.setUser(user);
+                            req.user = () => user;
+                            return next(context);
+                        }
+                    }
                 }
             }
         }
 
         // Unauthenticated Response
-        if (req.xhr || req.accepts('json') || req.path.startsWith('/api')) {
+        if (req.wantsJson && req.wantsJson()) {
             return res.status(401).json({ message: 'Unauthenticated.' });
         }
 

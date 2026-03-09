@@ -1,5 +1,6 @@
 const path = require('path');
 const Env = require('./Env');
+const HttpContext = require('../Foundation/Http/HttpContext');
 
 /**
  * Global helpers that mimic Laravel's helpers
@@ -246,6 +247,41 @@ function decrypt(value) {
     return Crypt.decrypt(value);
 }
 
+/**
+ * Apply multiple mixins/traits to a base class.
+ * @param {Function} BaseClass 
+ * @param  {...Function} traits 
+ * @returns {Function}
+ */
+function uses(BaseClass, ...traits) {
+    if (traits.length === 1 && Array.isArray(traits[0])) {
+        traits = traits[0];
+    }
+    return traits.reduce((Base, trait) => trait(Base), BaseClass);
+}
+
+/**
+ * Get the current request instance.
+ * @returns {Request}
+ */
+function request() {
+    const expressReq = HttpContext.getRequest();
+    if (!expressReq) return null;
+    const Request = use('laranode/Http/Request');
+    return new Request(expressReq);
+}
+
+/**
+ * Get the current response instance.
+ * @returns {Response}
+ */
+function response() {
+    const expressRes = HttpContext.getResponse();
+    if (!expressRes) return null;
+    const Response = use('laranode/Http/Response');
+    return new Response(expressRes);
+}
+
 // Attach to global scope for Laravel-like experience
 global.setBasePath = setBasePath;
 global.base_path = base_path;
@@ -260,12 +296,15 @@ global.config = config;
 global.dump = dump;
 global.dd = dd;
 global.use = use;
+global.uses = uses;
 global.collect = collect;
 global.url = url;
 global.asset = asset;
 global.route = route;
 global.encrypt = encrypt;
 global.decrypt = decrypt;
+global.request = request;
+global.response = response;
 
 module.exports = {
     setBasePath,
@@ -281,10 +320,13 @@ module.exports = {
     dump,
     dd,
     use,
+    uses,
     collect,
     url,
     asset,
     route,
     encrypt,
-    decrypt
+    decrypt,
+    request,
+    response
 };

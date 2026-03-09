@@ -11,6 +11,18 @@ class Repository {
      * @param {string} configPath 
      */
     loadConfigurationFiles(configPath) {
+        if (typeof base_path === 'function') {
+            const cacheFile = base_path('bootstrap/cache/config.json');
+            if (fs.existsSync(cacheFile)) {
+                try {
+                    this.items = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+                    return;
+                } catch (e) {
+                    // fall through if corrupt
+                }
+            }
+        }
+
         if (!fs.existsSync(configPath)) {
             return;
         }

@@ -58,12 +58,57 @@ class JsonResource {
     }
 
     /**
+     * Include a value if a given condition is truthy.
+     */
+    when(condition, value, defaultVal = null) {
+        if (condition) {
+            return typeof value === 'function' ? value() : value;
+        }
+        const MissingValue = require('../MissingValue');
+        return arguments.length >= 3
+            ? (typeof defaultVal === 'function' ? defaultVal() : defaultVal)
+            : new MissingValue();
+    }
+
+    /**
+     * Include a relationship if it has been loaded on the model.
+     */
+    whenLoaded(relationship) {
+        const MissingValue = require('../MissingValue');
+
+        if (!this.resource || typeof this.resource.relationLoaded !== 'function') {
+            return new MissingValue();
+        }
+
+        if (this.resource.relationLoaded(relationship)) {
+            // We can return a generic JsonResource if the user hasn't specified a dedicated Resource
+            return this.resource.relations[relationship];
+        }
+
+        return new MissingValue();
+    }
+
+    /**
+     * Merge a value into the array if a given condition is truthy.
+     */
+    mergeWhen(condition, value) {
+        if (condition) {
+            const MergeValue = require('../MergeValue');
+            return new MergeValue(typeof value === 'function' ? value() : value);
+        }
+        const MissingValue = require('../MissingValue');
+        return new MissingValue();
+    }
+
+    /**
      * Resolve the resource to a final JSON object.
      * @param {Request} request 
      * @returns {Object}
      */
     resolve(request) {
         let data = this.toArray(request);
+
+        data = this.filterData(data);
 
         // Standardize output to always wrap in { data: ... } unless disabled
         const finalPayload = {
@@ -72,6 +117,43 @@ class JsonResource {
         };
 
         return finalPayload;
+    }
+
+    /**
+     * Recursively filter missing values and unpack merge values.
+     * @param {*} data 
+     * @private
+     */
+    filterData(data) {
+        const MissingValue = require('../MissingValue');
+        const MergeValue = require('../MergeValue');
+
+        if (Array.isArray(data)) {
+            return data.filter(item => !(item instanceof MissingValue)).map(item => this.filterData(item));
+        }
+
+        if (typeof data === 'object' && data !== null) {
+            if (data instanceof MissingValue) return data;
+
+            const filtered = {};
+            for (const key in data) {
+                const value = data[key];
+
+                if (value instanceof MissingValue) {
+                    continue; // Skip entirely
+                }
+
+                if (value instanceof MergeValue) {
+                    const mergedData = this.filterData(value.data);
+                    Object.assign(filtered, mergedData);
+                } else {
+                    filtered[key] = this.filterData(value);
+                }
+            }
+            return filtered;
+        }
+
+        return data;
     }
 
     /**

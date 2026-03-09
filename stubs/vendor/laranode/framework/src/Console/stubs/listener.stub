@@ -1,0 +1,15 @@
+/**
+ * Event listener class
+ */
+class {{CLASS_NAME}} {
+    /**
+     * Handle the event.
+     *
+     * @param {Object} event - The event data
+     */
+    async handle(event) {
+        //
+    }
+}
+
+module.exports = {{CLASS_NAME}};

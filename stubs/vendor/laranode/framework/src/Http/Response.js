@@ -27,6 +27,29 @@ class Response {
     }
 
     /**
+     * Set a cookie on the response.
+     * @param {string} name 
+     * @param {string} value 
+     * @param {Object} options 
+     * @returns {this}
+     */
+    cookie(name, value, options = {}) {
+        this.res.cookie(name, value, options);
+        return this;
+    }
+
+    /**
+     * Clear a cookie.
+     * @param {string} name 
+     * @param {Object} options 
+     * @returns {this}
+     */
+    clearCookie(name, options = {}) {
+        this.res.clearCookie(name, options);
+        return this;
+    }
+
+    /**
      * Send raw body response.
      * @param {string} body 
      * @returns {*}
@@ -41,17 +64,91 @@ class Response {
      * @param {Object} data 
      */
     view(viewPath, data = {}) {
+        const MessageBag = use('laranode/Support/MessageBag');
+
+        // Ensure errors is always a MessageBag instance
+        if (!data.errors) {
+            data.errors = new MessageBag({});
+        } else if (!(data.errors instanceof MessageBag)) {
+            data.errors = new MessageBag(data.errors);
+        }
+
+        // Inject validation errors and old input from session flash
+        if (this.res.req && typeof this.res.req.flash === 'function') {
+            const errorsFlash = this.res.req.flash('errors');
+            const oldFlash = this.res.req.flash('old');
+
+            // flash() returns an array, we want the first element if it exists
+            // Wrap errors in MessageBag for Laravel-like methods
+            const rawErrors = errorsFlash && errorsFlash.length > 0 ? errorsFlash[0] : {};
+            data.errors = new MessageBag(rawErrors);
+
+            const oldInput = oldFlash && oldFlash.length > 0 ? oldFlash[0] : {};
+
+            // Add an old() helper function if not already provided
+            if (typeof data.old !== 'function') {
+                data.old = function (key, defaultVal = '') {
+                    if (!key) return oldInput;
+
+                    if (!key.includes('.')) {
+                        return oldInput[key] !== undefined ? oldInput[key] : defaultVal;
+                    }
+
+                    return key.split('.').reduce((obj, k) => (obj && obj[k] !== undefined) ? obj[k] : undefined, oldInput) ?? defaultVal;
+                };
+            }
+
+            if (!data.csrfToken && this.res.req.session && this.res.req.session.csrfToken) {
+                data.csrfToken = this.res.req.session.csrfToken;
+            }
+        }
+
+        // Global data injection
+        if (this.res.req) {
+            const Request = use('laranode/Http/Request');
+            const reqInstance = new Request(this.res.req);
+            data.request = reqInstance;
+            data.session = reqInstance.session;
+
+            // Inject auth state - Populated by ShareUser middleware or Authenticate middleware
+            const user = reqInstance.user();
+            data.auth = {
+                user: user,
+                check: !!user
+            };
+        }
+
         const html = global.view ? global.view(viewPath, data) : `View helper not found for ${viewPath}`;
         return this.send(html);
     }
 
     /**
-     * Redirect to the given URL.
-     * @param {string} url 
+     * Redirect to the given URL or return this for chaining (e.g. .back()).
+     * @param {string|null} url 
      * @param {number} status 
+     * @returns {this|*}
      */
-    redirect(url, status = 302) {
+    redirect(url = null, status = 302) {
+        if (url === null) {
+            return this;
+        }
+
+        // Ensure session is saved before redirect (for flash data)
+        if (this.res.req && this.res.req.session && this.res.req.session.save) {
+            try {
+                this.res.req.session.save();
+            } catch (e) { }
+        }
         return this.res.redirect(status, url);
+    }
+
+    /**
+     * Redirect to the previous page.
+     * @returns {*}
+     */
+    back() {
+        const url = this.res.req ? (this.res.req.get('Referrer') || '/') : '/';
+        return this.redirect(url);
     }
 
     /**

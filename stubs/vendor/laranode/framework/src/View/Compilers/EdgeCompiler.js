@@ -20,13 +20,12 @@ class EdgeCompiler {
         let result = template;
         const sections = {};
 
-        // If this template extends a layout, extract sections and compile the layout instead
-        const extendsMatch = result.match(/@extends\s*\(['"](.+?)['"]\)/);
+        // If this template extends a layout or uses a layout, extract sections and compile the layout instead
+        const extendsMatch = result.match(/@(extends|layout)\s*\(['"](.+?)['"]\)/);
         if (extendsMatch) {
-            const layoutName = extendsMatch[1];
+            const layoutName = extendsMatch[2];
 
             // Extract all sections from the child template
-            // Matches @section('name') ... @endsection
             const sectionRegex = /@section\s*\(['"](.+?)['"]\)\s*([\s\S]*?)@endsection/g;
             let match;
             while ((match = sectionRegex.exec(result)) !== null) {
@@ -34,9 +33,18 @@ class EdgeCompiler {
             }
 
             // Find and load the parent layout
-            const layoutPath = path.join(base_path('resources/views'), `${layoutName.replace(/\./g, '/')}.edge`);
+            let layoutPath = '';
+            if (path.isAbsolute(layoutName)) {
+                layoutPath = layoutName;
+                if (!path.extname(layoutPath)) {
+                    layoutPath += '.edge';
+                }
+            } else {
+                layoutPath = path.join(base_path('resources/views'), `${layoutName.replace(/\./g, '/')}.edge`);
+            }
+
             if (!fs.existsSync(layoutPath)) {
-                throw new Error(`Layout [${layoutName}] not found for @extends`);
+                throw new Error(`Layout [${layoutName}] not found for @${extendsMatch[1]}`);
             }
 
             // Start compiling the parent layout
@@ -44,6 +52,11 @@ class EdgeCompiler {
 
             // Replace @yield('sectionName') in the parent with the extracted child section contents
             parentTemplate = parentTemplate.replace(/@yield\s*\(['"](.+?)['"]\)/g, (fullMatch, sectionName) => {
+                return (sections[sectionName] !== undefined) ? sections[sectionName] : '';
+            });
+
+            // Also support @section('name') @endsection in layouts as placeholders (AdonisJS style)
+            parentTemplate = parentTemplate.replace(/@section\s*\(['"](.+?)['"]\)\s*@endsection/g, (fullMatch, sectionName) => {
                 return (sections[sectionName] !== undefined) ? sections[sectionName] : '';
             });
 
@@ -58,9 +71,14 @@ class EdgeCompiler {
         // 1. Comments {{-- comment --}}
         result = result.replace(/{{--([\s\S]+?)--}}/g, '');
 
-        // 2. Includes @include('partial.name')
-        // Note: we use ${} for our own markers, which will NOT be escaped because we do it after step 0
-        result = result.replace(/@include\s*\(['"](.+?)['"]\)/g, '${global.view(\'$1\', data)}');
+        // 2. Includes @include('partial.name', { extra: 'data' })
+        // Supports optional second argument for passing local variables
+        result = result.replace(/@include\s*\(['"](.+?)['"]\s*(?:,\s*(.+?))?\s*\)/g, (match, ipath, extraData) => {
+            // Use ipath to avoid confusion with the path module
+            const finalPath = path.isAbsolute(ipath) ? ipath : ipath;
+            // The global.view helper now handles absolute vs relative internally
+            return `\${global.view('${finalPath}', Object.assign({}, data, ${extraData || '{}'}))}`;
+        });
 
         // 2.1 CSRF Token @csrf
         // Generates a hidden input with the CSRF token
@@ -77,7 +95,10 @@ class EdgeCompiler {
         result = result.replace(/@empty/g, '`; } } else { out += `');
         result = result.replace(/@endforelse/g, '`; } out += `');
 
-        // Basic Loops
+        // Basic Loops (Supports Array and Objects via Object.values)
+        result = result.replace(/@each\s*\((.+)\s+in\s+(.+)\)/g, '`; for (const $1 of (Array.isArray($2) ? $2 : (typeof $2 === "object" && $2 !== null ? Object.values($2) : []))) { out += `');
+        result = result.replace(/@endeach/g, '`; } out += `');
+
         result = result.replace(/@foreach\s*\((.+)\s+as\s+(.+)\)/g, '`; for (const $2 of ($1 || [])) { out += `');
         result = result.replace(/@endforeach/g, '`; } out += `');
 
@@ -151,6 +172,10 @@ class EdgeCompiler {
                         if (typeof key === 'symbol') return false;
                         // Don't shadow internal functions/variables
                         if (['escapeHtml', 'safeData', 'data', 'out'].includes(key)) return false;
+                        
+                        // If it's in the data, prioritize it even if it's a global
+                        if (Object.prototype.hasOwnProperty.call(target, key)) return true;
+
                         // Don't shadow global objects like String, Math, console
                         if (key in global) return false;
                         return true;

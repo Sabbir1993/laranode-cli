@@ -75,18 +75,24 @@ Facade.resolvedInstance = {};
  * ES6 Proxy magic to forward static calls to the underlying instance
  */
 module.exports = new Proxy(Facade, {
-    get(target, prop) {
+    get(target, prop, receiver) {
         if (prop in target) {
             return target[prop];
         }
 
-        // Return a proxy that delays resolution until called
-        const root = target.getFacadeRoot();
-        if (root && typeof root[prop] === 'function') {
-            return root[prop].bind(root);
-        }
-        if (root && root[prop] !== undefined) {
-            return root[prop];
+        // If 'receiver' is a subclass, use it to resolve the facade root
+        const rootClass = (receiver && receiver.getFacadeRoot) ? receiver : target;
+
+        try {
+            const root = rootClass.getFacadeRoot();
+            if (root && typeof root[prop] === 'function') {
+                return root[prop].bind(root);
+            }
+            if (root && root[prop] !== undefined) {
+                return root[prop];
+            }
+        } catch (e) {
+            // Fallback for cases where getFacadeAccessor is not implemented on target
         }
 
         return undefined;

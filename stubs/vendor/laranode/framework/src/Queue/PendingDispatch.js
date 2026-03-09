@@ -1,4 +1,4 @@
-const DB = use('laranode/Support/Facades/DB');
+const Queue = use('laranode/Support/Facades/Queue');
 
 class PendingDispatch {
     constructor(job) {
@@ -52,22 +52,14 @@ class PendingDispatch {
      * @private
      */
     async _doSend() {
-        const now = Math.floor(Date.now() / 1000);
-        const availableAt = now + this.delaySeconds;
+        const jobPath = this.resolveJobPath();
+        const data = this.job.data || {};
 
-        const payload = JSON.stringify({
-            job: this.resolveJobPath(),
-            data: this.job.data || {}
-        });
-
-        await DB.table('jobs').insert({
-            queue: this.queueName,
-            payload: payload,
-            attempts: 0,
-            reserved_at: null,
-            available_at: availableAt,
-            created_at: now
-        });
+        if (this.delaySeconds > 0) {
+            await Queue.later(this.delaySeconds, jobPath, data, this.queueName);
+        } else {
+            await Queue.push(jobPath, data, this.queueName);
+        }
     }
 
     /**

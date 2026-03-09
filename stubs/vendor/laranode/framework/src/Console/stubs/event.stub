@@ -1,0 +1,13 @@
+/**
+ * Event class stub
+ */
+class {{CLASS_NAME}} {
+    /**
+     * Create a new event instance.
+     */
+    constructor() {
+        //
+    }
+}
+
+module.exports = {{CLASS_NAME}};

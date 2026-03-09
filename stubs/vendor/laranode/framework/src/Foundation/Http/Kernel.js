@@ -1,8 +1,13 @@
+const path = require('path');
 const Pipeline = require('../../Pipeline/Pipeline');
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const session = require('express-session');
 const flash = require('connect-flash');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const HttpContext = require('./HttpContext');
+const FileSessionStore = require('../../Session/FileSessionStore');
 
 class Kernel {
     /**
@@ -40,6 +45,10 @@ class Kernel {
         await this.bootstrap();
 
         // 1. Setup global express middleware (body parser etc)
+        this.expressApp.use(helmet({
+            contentSecurityPolicy: false,
+        }));
+        this.expressApp.use(cookieParser());
         this.expressApp.use(express.static(process.cwd() + '/public'));
         this.expressApp.use(express.json());
         this.expressApp.use(express.urlencoded({ extended: true }));
@@ -48,17 +57,55 @@ class Kernel {
             limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max limit
         }));
 
+        const config = this.app.make('config');
+        const sessionConfig = config.get('session');
+        let sessionStore;
+
+        if (sessionConfig.driver === 'file') {
+            sessionStore = new FileSessionStore({
+                directory: sessionConfig.files || path.join(process.cwd(), 'storage/framework/sessions')
+            });
+        } else if (sessionConfig.driver === 'redis') {
+            try {
+                const RedisStore = require('connect-redis').default;
+                const Redis = use('laranode/Support/Facades/Redis');
+                sessionStore = new RedisStore({
+                    client: Redis.connection().client,
+                    prefix: sessionConfig.cookie + ':sess:'
+                });
+            } catch (e) {
+                console.warn('Redis session store requested but not fully configured or connect-redis not installed. Falling back to memory.');
+            }
+        }
+        // Default to MemoryStore if no store resolved or memory driver requested
+
         this.expressApp.use(session({
+            store: sessionStore,
+            name: sessionConfig.cookie || 'laranode_session',
             secret: process.env.APP_KEY || 'laranode_secret_key',
             resave: false,
             saveUninitialized: true,
-            cookie: { secure: process.env.APP_ENV === 'production' }
+            cookie: {
+                secure: sessionConfig.secure || process.env.APP_ENV === 'production',
+                httpOnly: sessionConfig.http_only || true,
+                sameSite: sessionConfig.same_site || 'lax',
+                maxAge: (sessionConfig.lifetime || 120) * 60 * 1000,
+                path: sessionConfig.path || '/',
+                domain: sessionConfig.domain || null
+            }
         }));
         this.expressApp.use(flash());
 
         // 2. Setup global laranode middleware
         this.expressApp.use(async (req, res, next) => {
             const context = { req, res, app: this.app };
+
+            // Auto-flash old input on POST/PUT/PATCH requests
+            if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
+                if (typeof req.flash === 'function') {
+                    req.flash('old', req.body);
+                }
+            }
 
             try {
                 await (new Pipeline(this.app))
@@ -116,22 +163,24 @@ class Kernel {
             const middlewares = route.middlewares;
 
             this.expressApp[method](uri, async (req, res, next) => {
-                const context = { req, res, app: this.app };
+                HttpContext.run({ req, res }, async () => {
+                    const context = { req, res, app: this.app };
 
-                // Resolve route specific middleware + group middleware
-                const pipeMiddlewares = this.resolveMiddlewares(middlewares);
+                    // Resolve route specific middleware + group middleware
+                    const pipeMiddlewares = this.resolveMiddlewares(middlewares);
 
-                try {
-                    await (new Pipeline(this.app))
-                        .send(context)
-                        .through(pipeMiddlewares)
-                        .then(async (ctx) => {
-                            // Execute actual controller/closure
-                            await this.executeAction(action, ctx.req, ctx.res, next);
-                        });
-                } catch (err) {
-                    next(err);
-                }
+                    try {
+                        await (new Pipeline(this.app))
+                            .send(context)
+                            .through(pipeMiddlewares)
+                            .then(async (ctx) => {
+                                // Execute actual controller/closure
+                                await this.executeAction(action, ctx.req, ctx.res, next);
+                            });
+                    } catch (err) {
+                        next(err);
+                    }
+                });
             });
         }
     }
@@ -205,14 +254,35 @@ class Kernel {
             }
         } catch (err) {
             if (err.name === 'ValidationException') {
-                if (expressReq.xhr || expressReq.accepts(['html', 'json']) === 'json') {
+                // Check if this is an AJAX/JSON request
+                const isJson = expressReq.xhr || expressReq.accepts(['html', 'json']) === 'json' ||
+                    expressReq.get('accept') === 'application/json' ||
+                    expressReq.path.startsWith('/api');
+
+                if (isJson) {
+                    // Laravel-like JSON response format
                     expressRes.status(err.status || 422).json({
                         message: err.message,
-                        errors: err.errors
+                        errors: err.errors,
+                        // Additional Laravel-like info
+                        error: err.message,
+                        // You can also include validated data if needed
+                        // validated: err.validator ? err.validator._validatedData : {}
                     });
                 } else {
-                    expressReq.flash('errors', err.errors);
+                    // View/HTML response - flash errors and old input
+                    // Use getErrors() to get plain object for flash
+                    const errorsToFlash = typeof err.getErrors === 'function' ? err.getErrors() : err.errors;
+                    expressReq.flash('errors', errorsToFlash);
                     expressReq.flash('old', expressReq.body);
+
+                    // Create a MessageBag-like object for backward compatibility
+                    const MessageBag = use('laranode/Support/MessageBag');
+                    const errorsBag = new MessageBag(err.errors);
+
+                    // Make errors available in session for views
+                    expressReq.session.errors = errorsBag;
+
                     const referer = expressReq.get('Referrer') || '/';
                     expressRes.redirect(referer);
                 }

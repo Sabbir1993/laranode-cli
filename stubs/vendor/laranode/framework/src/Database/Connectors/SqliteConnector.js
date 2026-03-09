@@ -37,6 +37,23 @@ class SqliteConnector {
             throw new Error(`SQL Error: ${error.message} \nQuery: ${sql} \nBindings: ${JSON.stringify(bindings)}`);
         }
     }
+
+    async beginTransaction() {
+        const db = this.connect();
+        db.exec('BEGIN TRANSACTION');
+
+        return {
+            query: async (sql, bindings = []) => {
+                return this.query(sql, bindings); // SQLite driver is synchronous, so safe to use standard query
+            },
+            commit: async () => {
+                db.exec('COMMIT');
+            },
+            rollBack: async () => {
+                db.exec('ROLLBACK');
+            }
+        };
+    }
 }
 
 module.exports = SqliteConnector;

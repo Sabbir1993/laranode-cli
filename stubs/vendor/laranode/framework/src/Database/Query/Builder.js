@@ -422,30 +422,64 @@ class Builder {
 
             // Handle eager loading
             if (this.eagerLoad && this.eagerLoad.length > 0) {
-                this.eagerLoadRelations(models);
+                await this.eagerLoadRelations(models);
             }
         }
 
         return models;
     }
 
-    eagerLoadRelations(models) {
+    with(...relations) {
+        if (!this.eagerLoad) this.eagerLoad = [];
+        this.eagerLoad.push(...relations);
+        return this;
+    }
+
+    async eagerLoadRelations(models) {
         if (models.length === 0) return;
 
         for (const relation of this.eagerLoad) {
+            let name = relation;
+            let nested = null;
+            let columns = null;
+
+            // Support 'relation.nested' syntax
+            if (typeof relation === 'string' && relation.includes('.')) {
+                const parts = relation.split('.');
+                name = parts[0];
+                nested = parts.slice(1).join('.');
+            }
+
+            // Support 'relation:col1,col2' syntax
+            if (name.includes(':')) {
+                const parts = name.split(':');
+                name = parts[0];
+                columns = parts[1].split(',');
+            }
+
             // Instantiate a dummy model to access the relation method
             const dummy = new this.model();
-            if (typeof dummy[relation] !== 'function') continue;
+            if (typeof dummy[name] !== 'function') continue;
 
-            // Get the relationship builder
-            const relationBuilder = dummy[relation]();
-
-            // For now, in a sync world, we just fetch all related records.
-            // Ideally this uses a generic IN clause, but this is a simplified MVP
             for (const model of models) {
                 // Re-bind the local key / foreign key using the actual model instance
-                const specificBuilder = model[relation]();
-                model.relations[relation] = specificBuilder.getResults();
+                const specificBuilder = model[name]();
+
+                // Apply column selection if specified
+                if (columns && specificBuilder && typeof specificBuilder.select === 'function') {
+                    specificBuilder.select(...columns);
+                }
+
+                // Add nested relations to be loaded by the child query
+                if (nested && specificBuilder && typeof specificBuilder.with === 'function') {
+                    specificBuilder.with(nested);
+                }
+
+                if (specificBuilder && typeof specificBuilder.getResults === 'function') {
+                    model.relations[name] = await specificBuilder.getResults();
+                } else if (specificBuilder && typeof specificBuilder.get === 'function') {
+                    model.relations[name] = await specificBuilder.get();
+                }
             }
         }
     }
@@ -454,6 +488,15 @@ class Builder {
         this.limit(1);
         const results = await this.get();
         return results.length ? results[0] : null;
+    }
+
+    async firstOrFail() {
+        const result = await this.first();
+        if (!result) {
+            const ModelNotFoundException = use('laranode/Database/Exceptions/ModelNotFoundException');
+            throw new ModelNotFoundException(`No query results for table [${this.fromTable}]`);
+        }
+        return result;
     }
 
     async value(column) {

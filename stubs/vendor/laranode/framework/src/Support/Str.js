@@ -56,6 +56,36 @@ class Str {
         if (!value) return '';
         return value.charAt(0).toUpperCase() + value.slice(1);
     }
+
+    static limit(value, limit = 100, end = '...') {
+        if (!value) return '';
+        if (value.length <= limit) return value;
+        return value.substring(0, limit).trimEnd() + end;
+    }
+
+    static words(value, words = 100, end = '...') {
+        if (!value) return '';
+        const arr = value.split(/\s+/);
+        if (arr.length <= words) return value;
+        return arr.slice(0, words).join(' ') + end;
+    }
+
+    static contains(haystack, needles) {
+        if (!Array.isArray(needles)) needles = [needles];
+        return needles.some(needle => haystack.includes(needle));
+    }
+
+    static is(pattern, value) {
+        if (!Array.isArray(pattern)) pattern = [pattern];
+
+        return pattern.some(pat => {
+            if (pat === value) return true;
+            // Escape special regex characters except *
+            pat = pat.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+            const regex = new RegExp(`^${pat}$`);
+            return regex.test(value);
+        });
+    }
 }
 
 module.exports = Str;

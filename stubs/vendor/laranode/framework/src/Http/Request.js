@@ -15,11 +15,36 @@ class Request {
     }
 
     /**
+     * Flash a message to the session (proxy to underlying Express req.flash)
+     * @param {string} key 
+     * @param {*} value 
+     * @returns {*}
+     */
+    flash(key, value) {
+        if (typeof this.req.flash === 'function') {
+            if (value === undefined) {
+                // Get flash data - returns array
+                return this.req.flash(key);
+            }
+            // Set flash data
+            return this.req.flash(key, value);
+        }
+        return null;
+    }
+
+    /**
      * Access a route parameter (Laravel style).
      */
     route(key, defaultValue = null) {
         if (!key) return this.params;
         return this.params[key] !== undefined ? this.params[key] : defaultValue;
+    }
+
+    /**
+     * Alias for route()
+     */
+    param(key, defaultValue = null) {
+        return this.route(key, defaultValue);
     }
 
     /**
@@ -58,14 +83,7 @@ class Request {
         return this.input(key) !== null;
     }
 
-    /**
-     * Retrieve an uploaded file from the request.
-     * @param {string} key 
-     * @returns {object|null}
-     */
-    file(key) {
-        return this.req.files && this.req.files[key] ? this.req.files[key] : null;
-    }
+
 
     /**
      * Retrieve a query string item from the request.
@@ -134,13 +152,24 @@ class Request {
     }
 
     /**
-     * Get uploaded file
+     * Retrieve an uploaded file from the request.
      * @param {string} key 
-     * @returns {*} 
+     * @returns {UploadedFile|null}
      */
     file(key) {
-        if (!this.req.files) return null;
-        return this.req.files[key] || null;
+        if (!this.req.files || !this.req.files[key]) {
+            return null;
+        }
+
+        const UploadedFile = require('./UploadedFile');
+        const fileData = this.req.files[key];
+
+        // Handle multiple files if necessary, but for now wrap single
+        if (Array.isArray(fileData)) {
+            return fileData.map(f => new UploadedFile(f));
+        }
+
+        return new UploadedFile(fileData);
     }
 
     /**
@@ -160,6 +189,14 @@ class Request {
     }
 
     /**
+     * Check if the request wants JSON.
+     * @returns {boolean}
+     */
+    wantsJson() {
+        return this.req.xhr || this.req.accepts(['html', 'json']) === 'json';
+    }
+
+    /**
      * Check if the request accepts a specific content type.
      * @param {string} types 
      * @returns {string|false}
@@ -174,6 +211,36 @@ class Request {
      */
     user() {
         return typeof this.req.user === 'function' ? this.req.user() : null;
+    }
+
+    /**
+     * Get the session instance with Laravel-like API.
+     * @returns {Object}
+     */
+    get session() {
+        const sessionObj = this.req.session;
+        return {
+            get(key, defaultValue = null) {
+                return sessionObj && sessionObj[key] !== undefined ? sessionObj[key] : defaultValue;
+            },
+            put(key, value) {
+                if (sessionObj) sessionObj[key] = value;
+            },
+            has(key) {
+                return sessionObj && sessionObj[key] !== undefined;
+            },
+            forget(key) {
+                if (sessionObj) delete sessionObj[key];
+            },
+            pull(key, defaultValue = null) {
+                const value = this.get(key, defaultValue);
+                this.forget(key);
+                return value;
+            },
+            all() {
+                return sessionObj || {};
+            }
+        };
     }
 
     /**

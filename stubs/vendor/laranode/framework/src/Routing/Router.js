@@ -35,7 +35,8 @@ class Router {
         const middlewares = this.currentGroup.reduce((acc, g) => acc.concat(g.middleware || []), []);
         let namespace = this.currentGroup.map(g => g.namespace || '').filter(Boolean).join('/');
 
-        let finalUri = (prefix + uri).replace(/\/+/g, '/'); // Normalize slashes
+        let finalUri = '/' + (prefix + uri);
+        finalUri = finalUri.replace(/\/+/g, '/'); // Normalize slashes
         // Convert Laravel {param} style to Express :param style
         finalUri = finalUri.replace(/\{([a-zA-Z0-9_]+)\}/g, ':$1');
 
@@ -44,8 +45,15 @@ class Router {
         }
 
         let finalAction = action;
-        if (typeof action === 'string' && namespace) {
-            finalAction = namespace + '/' + action;
+        if (typeof action === 'string') {
+            if (!action.includes('@')) {
+                action = `${action}@__invoke`;
+            }
+            if (namespace) {
+                finalAction = namespace + '/' + action;
+            } else {
+                finalAction = action;
+            }
         }
 
         const route = {
@@ -82,24 +90,69 @@ class Router {
     patch(uri, action) { return this.addRoute('PATCH', uri, action); }
     delete(uri, action) { return this.addRoute('DELETE', uri, action); }
 
-    resource(name, controller) {
-        this.get(`/${name}`, `${controller}@index`);
-        this.get(`/${name}/create`, `${controller}@create`);
-        this.post(`/${name}`, `${controller}@store`);
-        this.get(`/${name}/:id`, `${controller}@show`);
-        this.get(`/${name}/:id/edit`, `${controller}@edit`);
-        this.put(`/${name}/:id`, `${controller}@update`);
-        this.patch(`/${name}/:id`, `${controller}@update`);
-        this.delete(`/${name}/:id`, `${controller}@destroy`);
+    /**
+     * Register a resource controller with all 7 RESTful routes.
+     * 
+     * @param {string} name - Resource name (e.g. 'photos')
+     * @param {string} controller - Controller name (e.g. 'PhotoController')
+     * @param {Object} options - { only: [...], except: [...] }
+     */
+    resource(name, controller, options = {}) {
+        const param = name.replace(/s$/, ''); // photos -> photo
+        const allRoutes = {
+            index: () => this.get(`/${name}`, `${controller}@index`).name(`${name}.index`),
+            create: () => this.get(`/${name}/create`, `${controller}@create`).name(`${name}.create`),
+            store: () => this.post(`/${name}`, `${controller}@store`).name(`${name}.store`),
+            show: () => this.get(`/${name}/{${param}}`, `${controller}@show`).name(`${name}.show`),
+            edit: () => this.get(`/${name}/{${param}}/edit`, `${controller}@edit`).name(`${name}.edit`),
+            update: () => {
+                this.put(`/${name}/{${param}}`, `${controller}@update`).name(`${name}.update`);
+                this.patch(`/${name}/{${param}}`, `${controller}@update`);
+            },
+            destroy: () => this.delete(`/${name}/{${param}}`, `${controller}@destroy`).name(`${name}.destroy`),
+        };
+
+        this._registerResourceRoutes(allRoutes, options);
     }
 
-    apiResource(name, controller) {
-        this.get(`/${name}`, `${controller}@index`);
-        this.post(`/${name}`, `${controller}@store`);
-        this.get(`/${name}/:id`, `${controller}@show`);
-        this.put(`/${name}/:id`, `${controller}@update`);
-        this.patch(`/${name}/:id`, `${controller}@update`);
-        this.delete(`/${name}/:id`, `${controller}@destroy`);
+    /**
+     * Register an API resource controller (no create/edit views).
+     * 
+     * @param {string} name - Resource name
+     * @param {string} controller - Controller name
+     * @param {Object} options - { only: [...], except: [...] }
+     */
+    apiResource(name, controller, options = {}) {
+        const param = name.replace(/s$/, '');
+        const allRoutes = {
+            index: () => this.get(`/${name}`, `${controller}@index`).name(`${name}.index`),
+            store: () => this.post(`/${name}`, `${controller}@store`).name(`${name}.store`),
+            show: () => this.get(`/${name}/{${param}}`, `${controller}@show`).name(`${name}.show`),
+            update: () => {
+                this.put(`/${name}/{${param}}`, `${controller}@update`).name(`${name}.update`);
+                this.patch(`/${name}/{${param}}`, `${controller}@update`);
+            },
+            destroy: () => this.delete(`/${name}/{${param}}`, `${controller}@destroy`).name(`${name}.destroy`),
+        };
+
+        this._registerResourceRoutes(allRoutes, options);
+    }
+
+    /**
+     * Internal: register resource routes filtered by only/except.
+     */
+    _registerResourceRoutes(allRoutes, options) {
+        let actions = Object.keys(allRoutes);
+
+        if (options.only) {
+            actions = actions.filter(a => options.only.includes(a));
+        } else if (options.except) {
+            actions = actions.filter(a => !options.except.includes(a));
+        }
+
+        for (const action of actions) {
+            allRoutes[action]();
+        }
     }
 
     /**

@@ -11,6 +11,13 @@ class DatabaseManager {
     connection(name = null) {
         name = name || this.getDefaultConnection();
 
+        // Check if we have a transaction for this connection in the current HttpContext
+        const HttpContext = require('../Foundation/Http/HttpContext');
+        const store = HttpContext.get();
+        if (store && store.transactions && store.transactions[name]) {
+            return store.transactions[name];
+        }
+
         if (!this.connections[name]) {
             this.connections[name] = this.makeConnection(name);
         }
@@ -40,6 +47,8 @@ class DatabaseManager {
                 return new (require('./Connectors/SqliteConnector'))(config);
             case 'mysql':
                 return new (require('./Connectors/MysqlConnector'))(config);
+            case 'pgsql':
+                return new (require('./Connectors/PostgresConnector'))(config);
             default:
                 throw new Error(`Unsupported database driver [${config.driver}].`);
         }
@@ -59,6 +68,50 @@ class DatabaseManager {
     table(table) {
         const Builder = require('./Query/Builder');
         return new Builder(this.connection(), table);
+    }
+
+    /**
+     * Execute a closure within a transaction.
+     * @param {Function} callback 
+     */
+    async transaction(callback) {
+        const name = this.getDefaultConnection();
+        const conn = this.connection(name);
+
+        if (typeof conn.beginTransaction !== 'function') {
+            throw new Error(`Database connection [${name}] does not support transactions.`);
+        }
+
+        const trxConnection = await conn.beginTransaction();
+
+        // Propagate transaction through HttpContext
+        const HttpContext = require('../Foundation/Http/HttpContext');
+        const store = HttpContext.get();
+        let originalTrx = null;
+
+        if (store) {
+            if (!store.transactions) store.transactions = {};
+            originalTrx = store.transactions[name];
+            store.transactions[name] = trxConnection;
+        }
+
+        // Create a scoped DatabaseManager proxy for this transaction
+        const trxManager = Object.create(this);
+        trxManager.connection = () => trxConnection;
+
+        try {
+            const result = await callback(trxManager);
+            await trxConnection.commit();
+            return result;
+        } catch (error) {
+            await trxConnection.rollBack();
+            throw error;
+        } finally {
+            // Restore original transaction (null or previous)
+            if (store) {
+                store.transactions[name] = originalTrx;
+            }
+        }
     }
 
     /**

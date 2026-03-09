@@ -1,4 +1,5 @@
 const Command = use('laranode/Console/Command');
+const Queue = use('laranode/Support/Facades/Queue');
 const DB = use('laranode/Support/Facades/DB');
 
 class QueueWorkCommand extends Command {
@@ -28,23 +29,11 @@ class QueueWorkCommand extends Command {
     }
 
     async getNextJob(queue) {
-        return await DB.table('jobs')
-            .where('queue', queue)
-            .whereNull('reserved_at')
-            .where('available_at', '<=', Math.floor(Date.now() / 1000))
-            .oldest('id')
-            .first();
+        return await Queue.pop(queue);
     }
 
     async processJob(jobRecord, maxTries) {
-        // Mark as reserved
-        const now = Math.floor(Date.now() / 1000);
-        await DB.table('jobs')
-            .where('id', jobRecord.id)
-            .update({
-                reserved_at: now,
-                attempts: jobRecord.attempts + 1
-            });
+        // jobRecord is returned from the driver and contains { id, payload, attempts, delete, release }
 
         let jobInstance = null;
         let jobClassPath = 'Unknown';
@@ -63,23 +52,26 @@ class QueueWorkCommand extends Command {
             this.info(`[${endTimestamp}] Processed:  ${jobClassPath}`);
 
             // Delete job if successful
-            await DB.table('jobs').where('id', jobRecord.id).delete();
+            if (typeof jobRecord.delete === 'function') {
+                await jobRecord.delete();
+            }
         } catch (error) {
             const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
             this.error(`[${timestamp}] Failed:     ${jobClassPath}`);
             this.error(error.message);
 
-            if (jobRecord.attempts + 1 >= maxTries) {
+            if (jobRecord.attempts >= maxTries) {
                 // Move to failed_jobs table
                 await this.failJob(jobRecord, error);
                 this.error(`Job [${jobRecord.id}] has been moved to the failed_jobs table.`);
+                if (typeof jobRecord.delete === 'function') {
+                    await jobRecord.delete();
+                }
             } else {
                 // Release back to queue
-                await DB.table('jobs')
-                    .where('id', jobRecord.id)
-                    .update({
-                        reserved_at: null
-                    });
+                if (typeof jobRecord.release === 'function') {
+                    await jobRecord.release();
+                }
             }
         }
     }
@@ -98,8 +90,7 @@ class QueueWorkCommand extends Command {
             failed_at: failedAt
         });
 
-        // Remove from jobs table
-        await DB.table('jobs').where('id', jobRecord.id).delete();
+        // Will be removed from main queue by processJob via tracking
     }
 
     sleep(seconds) {

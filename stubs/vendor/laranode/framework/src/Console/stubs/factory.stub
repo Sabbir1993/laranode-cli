@@ -1,0 +1,16 @@
+const Factory = use('laranode/Database/Factories/Factory');
+
+class DummyClass extends Factory {
+    /**
+     * Define the model's default state.
+     *
+     * @return {Object}
+     */
+    definition() {
+        return {
+            // 'name': this.faker.person.fullName(),
+        };
+    }
+}
+
+module.exports = DummyClass;
