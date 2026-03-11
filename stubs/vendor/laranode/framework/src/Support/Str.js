@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 class Str {
     static studly(value) {
@@ -85,6 +86,73 @@ class Str {
             const regex = new RegExp(`^${pat}$`);
             return regex.test(value);
         });
+    }
+
+    static random(length = 16) {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
+    }
+
+    static uuid() {
+        return crypto.randomUUID();
+    }
+
+    static startsWith(haystack, needles) {
+        if (haystack === null || haystack === undefined) return false;
+        if (!Array.isArray(needles)) needles = [needles];
+        return needles.some(needle => haystack.toString().startsWith(needle));
+    }
+
+    static endsWith(haystack, needles) {
+        if (haystack === null || haystack === undefined) return false;
+        if (!Array.isArray(needles)) needles = [needles];
+        return needles.some(needle => haystack.toString().endsWith(needle));
+    }
+
+    static lower(value) {
+        return (value === null || value === undefined) ? '' : value.toString().toLowerCase();
+    }
+
+    static upper(value) {
+        return (value === null || value === undefined) ? '' : value.toString().toUpperCase();
+    }
+
+    static length(value) {
+        return (value === null || value === undefined) ? 0 : value.toString().length;
+    }
+
+    static substr(string, start, length = null) {
+        if (string === null || string === undefined) return '';
+        string = string.toString();
+        if (length === null) {
+            return string.substring(start);
+        }
+        return string.substring(start, start + length);
+    }
+
+    static replaceFirst(search, replace, subject) {
+        if (subject === null || subject === undefined) return '';
+        subject = subject.toString();
+        const pos = subject.indexOf(search);
+        if (pos !== -1) {
+            return subject.substring(0, pos) + replace + subject.substring(pos + search.length);
+        }
+        return subject;
+    }
+
+    static replaceLast(search, replace, subject) {
+        if (subject === null || subject === undefined) return '';
+        subject = subject.toString();
+        const pos = subject.lastIndexOf(search);
+        if (pos !== -1) {
+            return subject.substring(0, pos) + replace + subject.substring(pos + search.length);
+        }
+        return subject;
     }
 }
 
