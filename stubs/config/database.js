@@ -30,5 +30,18 @@ module.exports = {
                 max: 10,
             }
         },
+
+        pgsql: {
+            driver: 'pgsql',
+            host: env('DB_HOST', '127.0.0.1'),
+            port: env('DB_PORT', '5432'),
+            database: env('DB_DATABASE', 'laranode'),
+            username: env('DB_USERNAME', 'postgres'),
+            password: env('DB_PASSWORD', ''),
+            pool: {
+                min: 2,
+                max: 10,
+            }
+        },
     }
 };
