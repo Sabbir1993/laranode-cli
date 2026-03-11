@@ -119,6 +119,7 @@
                 <li><a href="#controllers">Controllers</a></li>
                 <li><a href="#middleware">Middleware</a></li>
                 <li><a href="#validation">Validation</a></li>
+                <li><a href="#api-resources">API Resources</a></li>
             </ul>
             <h3>Database</h3>
             <ul>
@@ -136,8 +137,20 @@
                 <li><a href="#authentication">Authentication</a></li>
                 <li><a href="#security">CSRF &amp; CORS</a></li>
             </ul>
+            <h3>Services</h3>
+            <ul>
+                <li><a href="#events">Events &amp; Listeners</a></li>
+                <li><a href="#broadcasting">Broadcasting</a></li>
+                <li><a href="#queues">Queues</a></li>
+                <li><a href="#cache">Cache</a></li>
+                <li><a href="#storage">Storage / Filesystem</a></li>
+                <li><a href="#mail">Mail</a></li>
+                <li><a href="#notifications">Notifications</a></li>
+            </ul>
             <h3>Advanced</h3>
             <ul>
+                <li><a href="#testing">Testing</a></li>
+                <li><a href="#performance">Performance (Caching)</a></li>
                 <li><a href="#artisan">Artisan CLI</a></li>
                 <li><a href="#http-client">HTTP Client</a></li>
                 <li><a href="#process">The Lifecycle</a></li>
@@ -343,6 +356,18 @@ Route.delete('/users/{id}', 'UserController&#64;destroy');</code></pre>
             <pre><code>Route.get('/users/{id}', (req, res) => {
     return res.json({ userId: req.params.id });
 });</code></pre>
+
+            <h3>Invokable Controllers</h3>
+            <p>If a controller is only responsible for a single action, you may implement the <code>__invoke</code> method and define the route without a method name.</p>
+            <pre><code>// app/Http/Controllers/UpdateProfile.js
+class UpdateProfile extends Controller {
+    async __invoke(req, res) {
+        // ...
+    }
+}
+
+// routes/web.js
+Route.post('/profile', 'UpdateProfile');</code></pre>
         </section>
 
         <section id="controllers">
@@ -574,6 +599,40 @@ async store(req, res) {
 
                 <p><em>...and dozens more including <code>prohibited</code>, <code>present</code>, <code>missing</code>, <code>ulid</code>, <code>uuid</code>, <code>mac_address</code>, etc. matching Laravel's exact behavior.</em></p>
             </div>
+        </section>
+
+        <section id="api-resources">
+            <h2>API Resources</h2>
+            <p>LaraNode's API resources allow you to expressively and easily transform your models and model collections into JSON.</p>
+            <pre><code>// app/Http/Resources/UserResource.js
+const JsonResource = use('laranode/Http/Resources/JsonResource');
+
+class UserResource extends JsonResource {
+    toArray(request) {
+        return {
+            id: this.id,
+            name: this.name,
+            email: this.email,
+            posts: PostResource.collection(this.whenLoaded('posts')),
+            created_at: this.created_at,
+        };
+    }
+}</code></pre>
+
+            <h3>Conditional Relationships</h3>
+            <p>The <code>whenLoaded</code> method may be used to conditionally include a relationship only if it has already been loaded on the model.</p>
+            <pre><code>'posts' => PostResource.collection(this.whenLoaded('posts'))</code></pre>
+
+            <h3>Conditional Attributes</h3>
+            <p>The <code>when</code> method may be used to conditionally include an attribute based on a condition.</p>
+            <pre><code>'is_admin' => this.when(request.user().isAdmin(), true)</code></pre>
+
+            <h3>Merging Attributes</h3>
+            <p>The <code>mergeWhen</code> method may be used to conditionally merge an object into the resource response.</p>
+            <pre><code>...this.mergeWhen(request.user().isAdmin(), {
+    secret_key: '...',
+    access_logs: '...'
+})</code></pre>
         </section>
 
         <!-- DATABASE -->
@@ -922,6 +981,242 @@ boot() {
 
 // In your controller or service
 const response = await Http.github().get('/users/Sabbir1993');</code></pre>
+        </section>
+
+        <section id="events">
+            <h2>Events &amp; Listeners</h2>
+            <p>LaraNode provides a robust event dispatching system. Listeners are automatically resolved through the service container.</p>
+            <pre><code>const Event = use('laranode/Support/Facades/Event');
+
+// Dispatch an event
+Event.dispatch('OrderShipped', order);
+
+// Listen to an event dynamically
+Event.listen('OrderShipped', SendShipmentNotification);</code></pre>
+            <p>You can also register your listeners declaratively in <code>app/Providers/EventServiceProvider.js</code>.</p>
+        </section>
+
+        <section id="broadcasting">
+            <h2>Broadcasting</h2>
+            <p>Powered by Socket.io, LaraNode's broadcasting allows you to share your server-side events with your client-side JavaScript application in real-time.</p>
+            
+            <h3>ShouldBroadcast</h3>
+            <p>To broadcast an event, simply implement the <code>ShouldBroadcast</code> trait on your event class. LaraNode will automatically broadcast the event to the channels returned by the <code>broadcastOn</code> method.</p>
+            <pre><code>// app/Events/OrderShipped.js
+const ShouldBroadcast = use('laranode/Broadcasting/ShouldBroadcast');
+
+class OrderShipped extends ShouldBroadcast {
+    constructor(order) {
+        super();
+        this.order = order;
+    }
+
+    broadcastOn() {
+        return ['orders', `user.${this.order.user_id}`];
+    }
+
+    broadcastWith() {
+        return {
+            id: this.order.id,
+            status: this.order.status
+        };
+    }
+}</code></pre>
+
+            <h3>Manual Broadcasting</h3>
+            <p>You may also broadcast messages manually using the <code>Broadcast</code> facade.</p>
+            <pre><code>const Broadcast = use('laranode/Support/Facades/Broadcast');
+
+Broadcast.to('chat-room').emit('NewMessage', { text: 'Hello!' });</code></pre>
+        </section>
+
+        <section id="queues">
+            <h2>Queues</h2>
+            <p>LaraNode's queue system allows you to offload time-consuming tasks, such as sending emails, to a background process. Supports <code>database</code> and <code>redis</code> drivers.</p>
+
+            <h3>Creating Jobs</h3>
+            <p>By default, all jobs are stored in <code>app/Jobs</code>. A job is a simple class with a <code>handle</code> method.</p>
+            <pre><code>// app/Jobs/ProcessPodcast.js
+class ProcessPodcast {
+    constructor(podcast) {
+        this.podcast = podcast;
+    }
+
+    async handle() {
+        // Process the podcast...
+    }
+}</code></pre>
+
+            <h3>Dispatching Jobs</h3>
+            <pre><code>const Queue = use('laranode/Support/Facades/Queue');
+
+// Basic dispatch
+Queue.push(new ProcessPodcast(podcast));
+
+// Delayed dispatch
+Queue.later(60, new ProcessPodcast(podcast)); // 60 seconds delay</code></pre>
+
+            <h3>Running the Worker</h3>
+            <pre><code># Start the queue worker
+node artisan queue:work</code></pre>
+        </section>
+
+        <section id="cache">
+            <h2>Cache</h2>
+            <p>The Cache system provides a unified API for various drivers (file, memory).</p>
+            <pre><code>const Cache = use('laranode/Support/Facades/Cache');
+
+// Store an item
+await Cache.put('key', 'value', 60);
+
+// Retrieve &amp; store if empty
+const users = await Cache.remember('users', 60, async () => {
+    return await DB.table('users').get();
+});</code></pre>
+        </section>
+
+        <section id="storage">
+            <h2>Storage / Filesystem</h2>
+            <p>Provides a powerful filesystem abstraction matching Laravel's Storage API. Supports local disks and public asset serving.</p>
+            <pre><code>const Storage = use('laranode/Support/Facades/Storage');
+
+// Store a file with visibility
+await Storage.put('avatars/1.jpg', fileData, 'public');
+
+// Check visibility
+const visibility = await Storage.getVisibility('file.jpg'); // 'public' or 'private'
+
+// Get URL (requires storage:link)
+const url = Storage.url('avatars/1.jpg'); // '/storage/avatars/1.jpg'
+
+// Get Mime Type
+const type = await Storage.mimeType('document.pdf'); // 'application/pdf'</code></pre>
+
+            <h3>The Storage Link</h3>
+            <p>To make files in <code>storage/app/public</code> accessible from the web, you should create a symbolic link from <code>public/storage</code> to <code>storage/app/public</code>.</p>
+            <pre><code>node artisan storage:link</code></pre>
+        </section>
+
+        <section id="mail">
+            <h2>Mail</h2>
+            <p>LaraNode provides a clean, fluent API over the Nodemailer library, featuring class-based Mailables and automatic queuing.</p>
+            
+            <h3>Creating Mailables</h3>
+            <pre><code>// app/Mail/WelcomeEmail.js
+const Mailable = use('laranode/Mail/Mailable');
+const ShouldQueue = use('laranode/Contracts/Queue/ShouldQueue');
+
+class WelcomeEmail extends Mailable {
+    constructor(user) {
+        super();
+        this.user = user;
+    }
+
+    build() {
+        return this.from('hello@app.com', 'LaraNode')
+            .subject('Welcome to LaraNode!')
+            .view('emails.welcome', { user: this.user })
+            .attach(public_path('welcome-guide.pdf'));
+    }
+}</code></pre>
+
+            <h3>Sending Mail</h3>
+            <pre><code>const Mail = use('laranode/Support/Facades/Mail');
+
+await Mail.to(user.email).send(new WelcomeEmail(user));</code></pre>
+
+            <h3>Queued Mail</h3>
+            <p>If your Mailable implements the <code>ShouldQueue</code> contract, it will be automatically pushed to the queue instead of sending synchronously.</p>
+            <pre><code>class WelcomeEmail extends Mailable implements ShouldQueue { ... }</code></pre>
+        </section>
+
+        <section id="notifications">
+            <h2>Notifications</h2>
+            <p>LaraNode allows you to send notifications across a variety of delivery channels, including mail, database, and broadcast (WebSockets).</p>
+
+            <h3>The Notifiable Mixin</h3>
+            <p>Apply the <code>Notifiable</code> mixin to any model that should receive notifications.</p>
+            <pre><code>const Notifiable = use('laranode/Notifications/Notifiable');
+
+class User extends Notifiable(Model) { ... }
+
+// Then send notification directly
+await user.notify(new InvoicePaid(invoice));</code></pre>
+
+            <h3>Delivery Channels</h3>
+            <p>Define the <code>via</code> method on your notification class to specify the channels.</p>
+            <pre><code>class InvoicePaid extends Notification {
+    via(notifiable) {
+        return ['mail', 'database', 'broadcast'];
+    }
+
+    toMail(notifiable) {
+        return (new MailMessage)
+            .subject('Invoice Paid')
+            .line('Thank you for your payment!');
+    }
+
+    toDatabase(notifiable) {
+        return { invoice_id: this.invoice.id };
+    }
+
+    toBroadcast(notifiable) {
+        return { amount: this.invoice.total };
+    }
+}</code></pre>
+        </section>
+
+        <section id="testing">
+            <h2>Testing</h2>
+            <p>LaraNode provides a robust testing framework inspired by Laravel. It supports <code>artisan test</code> and provides a <code>TestCase</code> class for building expressive feature tests.</p>
+
+            <h3>Creating Tests</h3>
+            <pre><code>node artisan make:test UserTest --feature</code></pre>
+
+            <h3>The TestCase</h3>
+            <pre><code>// tests/Feature/UserTest.js
+const TestCase = use('laranode/Foundation/Testing/TestCase');
+
+class UserTest extends TestCase {
+    async test_can_visit_home_page() {
+        const response = await this.get('/');
+        response.assertStatus(200);
+        response.assertSee('LaraNode');
+    }
+
+    async test_can_create_user() {
+        const response = await this.post('/users', {
+            name: 'John Doe',
+            email: 'john@example.com'
+        });
+        response.assertRedirect('/users');
+    }
+}</code></pre>
+
+            <h3>Assertions</h3>
+            <p>Responses include many helpful assertions: <code>assertStatus</code>, <code>assertSee</code>, <code>assertJson</code>, <code>assertRedirect</code>, <code>assertSessionHasErrors</code>, and more.</p>
+
+            <h3>Running Tests</h3>
+            <pre><code>node artisan test</code></pre>
+        </section>
+
+        <section id="performance">
+            <h2>Performance &amp; Caching</h2>
+            <p>Optimize your application for production by caching performance-heavy components.</p>
+
+            <h3>Configuration Caching</h3>
+            <pre><code># Create cache
+node artisan config:cache
+
+# Clear cache
+node artisan config:clear</code></pre>
+
+            <h3>Route Caching</h3>
+            <pre><code># Create cache
+node artisan route:cache
+
+# Clear cache
+node artisan route:clear</code></pre>
         </section>
 
         <section id="process">

@@ -3,7 +3,7 @@
 @section('content')
 <div class="card" style="max-width: 450px; margin: 0 auto;">
     <h1>Create Account</h1>
-    <form id="registerForm">
+    <form id="registerForm" method="POST" action="/register">
         <input type="hidden" id="csrfToken" name="_token" value="">
         <div class="form-group">
             <label for="name">Full Name</label>

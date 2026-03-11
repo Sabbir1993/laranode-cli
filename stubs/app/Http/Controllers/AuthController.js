@@ -1,5 +1,6 @@
 const Controller = use('App/Http/Controllers/Controller');
 const User = use('App/Models/User');
+const Auth = use('laranode/Support/Facades/Auth');
 const Hash = use('laranode/Support/Facades/Hash');
 const RegisterRequest = use('App/Http/Requests/Auth/RegisterRequest');
 const LoginRequest = use('App/Http/Requests/Auth/LoginRequest');
@@ -52,34 +53,44 @@ class AuthController extends Controller {
      */
     async login(req, res) {
         const data = await req.validated();
+        const attempt = await Auth.attempt(data);
 
-        const { email, password } = data;
+        if (attempt) {
+            if (req.wantsJson()) {
+                const user = Auth.user();
+                return res.json({
+                    success: true,
+                    user,
+                    token: user.plainToken || null
+                });
+            }
 
-        const user = await User.where('email', email).first();
-
-        if (!user || !await Hash.check(password, user.password)) {
-            return res.status(401).json({
-                message: 'Invalid login credentials'
-            });
+            if (Auth.user().role === 'admin') {
+                return res.redirect('/todos');
+            }
+            return res.redirect('/');
         }
 
-        // Generate token
-        const tokenResult = await user.createToken('auth_token');
+        if (req.wantsJson()) {
+            return res.status(401).json({ message: 'Invalid login credentials' });
+        }
 
-        return res.json({
-            success: true,
-            user,
-            token: tokenResult.plainTextToken
-        });
+        // Flash error manually (optional - can also rely on global middleware)
+        // Old input is already flashed globally in Kernel
+        if (typeof req.flash === 'function') {
+            req.flash('errors', { email: ['Invalid email or password'] });
+        }
+        return res.redirect('/login');
     }
 
     /**
      * Logout user.
      */
     async logout(req, res) {
-        const user = req.user();
-        if (user && user.currentAccessToken()) {
-            await user.currentAccessToken().delete();
+        await Auth.logout();
+
+        if (!req.wantsJson()) {
+            return res.redirect('/login');
         }
 
         return res.json({ success: true });

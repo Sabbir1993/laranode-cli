@@ -8,7 +8,7 @@
     </div>
 
     <!-- Add Todo Form -->
-    <form id="addTodoForm" style="display: flex; gap: 1rem; margin-bottom: 2.5rem;" enctype="multipart/form-data">
+    <form action="/todos" method="POST" id="addTodoForm" style="display: flex; gap: 1rem; margin-bottom: 2.5rem;" enctype="multipart/form-data">
         <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
             <input type="text" name="title" id="todoTitle" required placeholder="What needs to be done?" style="width: 100%;">
             <input type="file" name="attachment" id="todoFile" style="font-size: 0.85rem; color: var(--text-muted);">
@@ -20,46 +20,9 @@
     <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.2rem;">Active Tasks</h3>
     <div id="activeTodoList" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem;">
         @forelse(todos.filter(t => !t.is_completed) as todo)
-            <div class="todo-item card" data-id="{{ todo.id }}" style="padding: 1.25rem; background: rgba(255, 255, 255, 0.03); display: flex; flex-direction: column; gap: 0.75rem; transition: all 0.3s;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
-                        <input type="checkbox" class="toggle-todo" style="width: 1.25rem; height: 1.25rem; cursor: pointer; accent-color: var(--primary);">
-                        <span class="todo-title" style="font-weight: 500; font-size: 1.1rem; color: #fff;">{{ todo.title }}</span>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button class="edit-todo" style="background: rgba(59, 130, 246, 0.2); border: none; color: #3b82f6; cursor: pointer; padding: 0.5rem 0.75rem; border-radius: 0.25rem; font-size: 0.85rem; transition: background 0.2s;">Edit Reflection</button>
-                        <button class="delete-todo" style="background: rgba(239, 68, 68, 0.1); border: none; color: #ef4444; cursor: pointer; padding: 0.5rem; border-radius: 0.25rem; transition: background 0.2s;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <!-- Display File if available -->
-                @if(todo.file_path)
-                <div style="padding-left: 2.25rem; display: flex; gap: 0.75rem; align-items: center;">
-                    <button class="view-attachment" data-url="{{ todo.file_path }}" style="color: var(--primary); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.25rem; background: transparent; border: none; cursor: pointer; padding: 0;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                        View Attachment
-                    </button>
-                    <button class="delete-attachment" data-id="{{ todo.id }}" style="color: #ef4444; background: transparent; border: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center; opacity: 0.7; transition: opacity 0.2s;" title="Delete Attachment">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-                @endif
-                
-                <!-- Inline Edit Form (Hidden by default) -->
-                <form class="edit-todo-form" style="display: none; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; padding-left: 2.25rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.75rem;">
-                    <input type="text" class="edit-title-input" value="{{ todo.title }}" required style="padding: 0.5rem; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <input type="file" class="edit-file-input" style="font-size: 0.8rem; color: var(--text-muted);">
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button type="button" class="cancel-edit btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: transparent; border: 1px solid rgba(255,255,255,0.2);">Cancel</button>
-                            <button type="submit" class="save-edit btn" style="padding: 0.4rem 0.75rem; font-size: 0.8rem; background: var(--primary); border: none;">Save</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
+            @include('todos.todo_item', { todo })
         @empty
-            <div style="text-align: center; padding: 2rem 0; color: var(--text-muted); font-style: italic;">No active tasks.</div>
+            <div class="empty-msg" style="text-align: center; padding: 2rem 0; color: var(--text-muted); font-style: italic;">No active tasks.</div>
         @endforelse
     </div>
 
@@ -67,27 +30,9 @@
     <h3 style="margin-bottom: 1rem; color: #10b981; font-size: 1.2rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 2rem;">Completed Tasks</h3>
     <div id="completedTodoList" style="display: flex; flex-direction: column; gap: 1rem;">
         @forelse(todos.filter(t => t.is_completed) as todo)
-            <div class="todo-item card" data-id="{{ todo.id }}" style="padding: 1rem; background: rgba(16, 185, 129, 0.05); display: flex; flex-direction: column; gap: 0.5rem; opacity: 0.8; transition: all 0.3s;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
-                        <input type="checkbox" class="toggle-todo" checked style="width: 1.25rem; height: 1.25rem; cursor: pointer; accent-color: #10b981;">
-                        <span class="todo-title" style="text-decoration: line-through; color: var(--text-muted);">{{ todo.title }}</span>
-                    </div>
-                    <button class="delete-todo" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 0.5rem; transition: opacity 0.2s;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                    </button>
-                </div>
-                @if(todo.file_path)
-                <div style="padding-left: 2.25rem; display: flex; gap: 0.75rem; align-items: center;">
-                    <button class="view-attachment" data-url="{{ todo.file_path }}" style="color: #10b981; font-size: 0.85rem; background: transparent; border: none; padding: 0; cursor: pointer;">📎 View Attachment</button>
-                    <button class="delete-attachment" data-id="{{ todo.id }}" style="color: #ef4444; background: transparent; border: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center; opacity: 0.7; transition: opacity 0.2s;" title="Delete Attachment">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-                @endif
-            </div>
+            @include('todos.todo_item', { todo })
         @empty
-            <div style="text-align: center; padding: 1rem 0; color: var(--text-muted); font-size: 0.9rem;">No completed tasks yet.</div>
+            <div class="empty-msg" style="text-align: center; padding: 1rem 0; color: var(--text-muted); font-size: 0.9rem;">No completed tasks yet.</div>
         @endforelse
     </div>
 </div>
@@ -101,6 +46,40 @@
 </div>
 
 <script>
+// Toast notification helper
+function showToast(message, type = 'error') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 2rem;
+        right: 2rem;
+        padding: 1rem 1.5rem;
+        background: ${type === 'error' ? '#ef4444' : '#10b981'};
+        color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 10000;
+        transition: all 0.3s ease;
+        transform: translateY(-20px);
+        opacity: 0;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // API Helper that supports form data (for files)
 async function apiCall(url, method = 'GET', body = null, isFormData = false) {
     const headers = {};
@@ -119,18 +98,63 @@ async function apiCall(url, method = 'GET', body = null, isFormData = false) {
         options.body = isFormData ? body : JSON.stringify(body);
     }
 
-    const response = await fetch(url, options);
+    try {
+        const response = await fetch(url, options);
 
-    if (response.status === 401) {
-        window.location.href = '/login';
-        return;
+        if (response.status === 401) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const result = await response.json();
+
+        if (response.status === 422) {
+            // Handle validation errors
+            if (result.errors) {
+                const firstError = Object.values(result.errors)[0];
+                showToast(Array.isArray(firstError) ? firstError[0] : firstError);
+            } else {
+                showToast(result.message || 'Validation failed');
+            }
+            return result;
+        }
+
+        if (!response.ok) {
+            showToast(result.message || 'An error occurred');
+            return result;
+        }
+
+        return result;
+    } catch (err) {
+        showToast('Network error occurred');
+        throw err;
     }
-    return response.json();
 }
 
-// Add Todo (with file)
+// Helper to remove empty messages
+function checkEmptyMessages() {
+    ['activeTodoList', 'completedTodoList'].forEach(id => {
+        const list = document.getElementById(id);
+        const emptyMsg = list.querySelector('.empty-msg');
+        if (list.querySelectorAll('.todo-item').length > 0) {
+            if (emptyMsg) emptyMsg.style.display = 'none';
+        } else {
+            if (emptyMsg) emptyMsg.style.display = 'block';
+            else {
+                const msg = document.createElement('div');
+                msg.className = 'empty-msg';
+                msg.style.cssText = 'text-align: center; padding: 2rem 0; color: var(--text-muted); font-style: italic;';
+                msg.textContent = id === 'activeTodoList' ? 'No active tasks.' : 'No completed tasks yet.';
+                list.appendChild(msg);
+            }
+        }
+    });
+}
+
+// Add Todo (Ajax)
 document.getElementById('addTodoForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const form = e.target;
     const title = document.getElementById('todoTitle').value;
     const fileInput = document.getElementById('todoFile');
     
@@ -142,56 +166,105 @@ document.getElementById('addTodoForm').addEventListener('submit', async (e) => {
         formData.append('attachment', fileInput.files[0]);
     }
 
-    const result = await apiCall('/todos', 'POST', formData, true);
-    if (result && result.success) {
-        window.location.reload(); 
+    try {
+        const result = await apiCall('/todos', 'POST', formData, true);
+        if (result && result.success) {
+            form.reset();
+            const list = document.getElementById('activeTodoList');
+            list.insertAdjacentHTML('afterbegin', result.html);
+            checkEmptyMessages();
+        }
+    } catch (err) {
+        console.error('Failed to add todo:', err);
     }
 });
 
-// Toggle Completion
-document.querySelectorAll('.toggle-todo').forEach(checkbox => {
-    checkbox.addEventListener('change', async (e) => {
-        const todoItem = e.target.closest('.todo-item');
+// Event Delegation for Todo Actions
+document.addEventListener('click', async (e) => {
+    const target = e.target;
+
+    // Toggle Completion
+    if (target.classList.contains('toggle-todo')) {
+        const todoItem = target.closest('.todo-item');
         const id = todoItem.dataset.id;
-        // Notice the inversion since it's toggling based on current container
-        const is_completed = e.target.checked;
+        const is_completed = target.checked;
 
-        const result = await apiCall(`/todos/${id}`, 'PUT', { is_completed });
-        if (result && result.success) {
-            window.location.reload(); // Reload to move between lists
+        try {
+            const result = await apiCall(`/todos/${id}`, 'PUT', { is_completed });
+            if (result && result.success) {
+                todoItem.remove();
+                const targetList = document.getElementById(is_completed ? 'completedTodoList' : 'activeTodoList');
+                targetList.insertAdjacentHTML('afterbegin', result.html);
+                checkEmptyMessages();
+            }
+        } catch (err) {
+            target.checked = !is_completed; // Revert checkbox
+            console.error('Toggle failed:', err);
         }
-    });
-});
+    }
 
-// Delete Todo
-document.querySelectorAll('.delete-todo').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    // Delete Todo
+    if (target.closest('.delete-todo')) {
         if (!confirm('Are you sure you want to delete this task?')) return;
-        const id = e.target.closest('.todo-item').dataset.id;
-        const result = await apiCall(`/todos/${id}`, 'DELETE');
-        if (result && result.success) window.location.reload();
-    });
-});
+        const todoItem = target.closest('.todo-item');
+        const id = todoItem.dataset.id;
+        try {
+            const result = await apiCall(`/todos/${id}`, 'DELETE');
+            if (result && result.success) {
+                todoItem.remove();
+                checkEmptyMessages();
+            }
+        } catch (err) {
+            console.error('Delete failed:', err);
+        }
+    }
 
-// Inline Edit UI Toggles
-document.querySelectorAll('.edit-todo').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const item = e.target.closest('.todo-item');
+    // Edit UI Toggle
+    if (target.classList.contains('edit-todo')) {
+        const item = target.closest('.todo-item');
         const form = item.querySelector('.edit-todo-form');
         form.style.display = form.style.display === 'none' ? 'flex' : 'none';
-    });
-});
-document.querySelectorAll('.cancel-edit').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.target.closest('.edit-todo-form').style.display = 'none';
-    });
+    }
+
+    // Cancel Edit
+    if (target.classList.contains('cancel-edit')) {
+        target.closest('.edit-todo-form').style.display = 'none';
+    }
+
+    // Delete Attachment
+    if (target.closest('.delete-attachment')) {
+        if (!confirm('Remove attachment?')) return;
+        const todoItem = target.closest('.todo-item');
+        const id = todoItem.dataset.id;
+        try {
+            const result = await apiCall(`/todos/${id}`, 'PUT', { remove_attachment: true });
+            if (result && result.success) {
+                todoItem.innerHTML = new DOMParser().parseFromString(result.html, 'text/html').body.firstChild.innerHTML;
+            }
+        } catch (err) {
+            console.error('Delete attachment failed:', err);
+        }
+    }
+
+    // View Attachment
+    if (target.closest('.view-attachment')) {
+        const btn = target.closest('.view-attachment');
+        const url = btn.dataset.url;
+        if(url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
+            document.getElementById('modalImage').src = url;
+            document.getElementById('imageModal').style.display = 'flex';
+        } else {
+            window.open(url, '_blank');
+        }
+    }
 });
 
-// Save Inline Edit (with optional file)
-document.querySelectorAll('.edit-todo-form').forEach(form => {
-    form.addEventListener('submit', async (e) => {
+// Event Delegation for Edit Form Submit
+document.addEventListener('submit', async (e) => {
+    if (e.target.classList.contains('edit-todo-form')) {
         e.preventDefault();
-        const item = e.target.closest('.todo-item');
+        const form = e.target;
+        const item = form.closest('.todo-item');
         const id = item.dataset.id;
         const newTitle = form.querySelector('.edit-title-input').value;
         const fileInput = form.querySelector('.edit-file-input');
@@ -202,59 +275,25 @@ document.querySelectorAll('.edit-todo-form').forEach(form => {
             formData.append('attachment', fileInput.files[0]);
         }
 
-        const result = await apiCall(`/todos/${id}`, 'PUT', formData, true);
-        if (result && result.success) {
-            window.location.reload();
+        try {
+            const result = await apiCall(`/todos/${id}`, 'PUT', formData, true);
+            if (result && result.success) {
+                item.innerHTML = new DOMParser().parseFromString(result.html, 'text/html').body.firstChild.innerHTML;
+            }
+        } catch (err) {
+            console.error('Update failed:', err);
         }
-    });
+    }
 });
 
-// View Attachment Modal
-document.querySelectorAll('.view-attachment').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const url = e.currentTarget.dataset.url;
-        if(url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
-            document.getElementById('modalImage').src = url;
-            document.getElementById('imageModal').style.display = 'flex';
-        } else {
-            window.open(url, '_blank');
-        }
-    });
-});
-
+// Close Modals
 document.getElementById('closeModal').addEventListener('click', () => {
     document.getElementById('imageModal').style.display = 'none';
 });
-
-// Close modal on click outside image
 document.getElementById('imageModal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('imageModal')) {
         document.getElementById('imageModal').style.display = 'none';
     }
-});
-
-// Delete Attachment Only
-document.querySelectorAll('.delete-attachment').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!confirm('Remove attachment?')) return;
-        
-        try {
-            const id = e.currentTarget.dataset.id;
-            const result = await apiCall(`/todos/${id}`, 'PUT', { remove_attachment: true });
-            
-            if (result && result.success) {
-                window.location.reload();
-            } else {
-                alert('Failed to delete attachment. See console for details.');
-                console.error('Delete attachment returned:', result);
-            }
-        } catch (err) {
-            alert('Error deleting attachment.');
-            console.error(err);
-        }
-    });
 });
 </script>
 

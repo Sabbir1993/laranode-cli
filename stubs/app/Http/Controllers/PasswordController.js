@@ -46,8 +46,12 @@ class PasswordController extends Controller {
             // });
 
             // For development, log the reset link
-            const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/password/reset/${token}?email=${encodeURIComponent(email)}`;
-            console.log(`Password Reset URL: ${resetUrl}`);
+            // For development, log the reset link
+            if (process.env.APP_DEBUG === 'true') {
+                const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/password/reset/${token}?email=${encodeURIComponent(email)}`;
+                const Log = use('laranode/Support/Facades/Log');
+                Log.debug(`Password Reset URL: ${resetUrl}`);
+            }
         });
 
         // Always return success to prevent email enumeration

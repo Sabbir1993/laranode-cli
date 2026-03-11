@@ -9,18 +9,33 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "overrides": {
+    "diff": ">=8.0.3",
+    "serialize-javascript": ">=7.0.4"
+  },
   "dependencies": {
+    "@faker-js/faker": "^10.3.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
     "commander": "^14.0.3",
     "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-fileupload": "^1.5.2",
     "express-session": "^1.19.0",
-    "mysql2": "^3.18.2"
+    "helmet": "^8.1.0",
+    "ioredis": "^5.10.0",
+    "mime-types": "^3.0.2",
+    "mysql2": "^3.18.2",
+    "nodemailer": "^8.0.1",
+    "pg": "^8.20.0",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }

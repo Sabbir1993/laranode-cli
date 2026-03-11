@@ -1,7 +1,10 @@
 const Controller = use('App/Http/Controllers/Controller');
 const Todo = use('App/Models/Todo');
+const Auth = use('laranode/Support/Facades/Auth');
 const StoreTodoRequest = use('App/Http/Requests/Todo/StoreTodoRequest');
 const UpdateTodoRequest = use('App/Http/Requests/Todo/UpdateTodoRequest');
+const crypto = require('crypto');
+const path = require('path');
 
 class TodoController extends Controller {
     static get requests() {
@@ -15,11 +18,10 @@ class TodoController extends Controller {
      * Display a listing of the todos.
      */
     async index(req, res) {
-        const user = req.user();
+        const user = Auth.user();
         const todos = await user.todos().get();
 
-        // If it's an API request or expects JSON explicitly (not just */* matching)
-        if (req.xhr || req.accepts(['html', 'json']) === 'json') {
+        if (req.wantsJson()) {
             return res.json({ todos });
         }
 
@@ -36,22 +38,24 @@ class TodoController extends Controller {
 
         const attachment = req.file('attachment');
         if (attachment) {
-            const fileName = Date.now() + '_' + attachment.name;
+            const ext = path.extname(attachment.name);
+            const fileName = crypto.randomUUID() + ext;
             const uploadPath = process.cwd() + '/public/uploads/' + fileName;
             await attachment.mv(uploadPath);
             filePath = '/uploads/' + fileName;
         }
 
         const todo = await Todo.create({
-            user_id: req.user().id,
+            user_id: Auth.id(),
             title: data.title,
             description: data.description,
             is_completed: false,
             file_path: filePath
         });
 
-        if (req.xhr || req.accepts(['html', 'json']) === 'json') {
-            return res.json({ success: true, todo });
+        if (req.wantsJson()) {
+            const html = global.view('todos.todo_item', { todo });
+            return res.json({ success: true, todo, html });
         }
 
         return res.redirect('/todos');
@@ -68,7 +72,7 @@ class TodoController extends Controller {
         if (!(todo instanceof Todo)) {
             const id = req.params.todo;
             const model = await Todo.find(id);
-            if (!model || model.user_id !== req.user().id) {
+            if (!model || model.user_id !== Auth.id()) {
                 return res.status(403).json({ message: 'Unauthorized' });
             }
             todo = model;
@@ -90,7 +94,8 @@ class TodoController extends Controller {
 
         const attachment = req.file('attachment');
         if (attachment) {
-            const fileName = Date.now() + '_' + attachment.name;
+            const ext = path.extname(attachment.name);
+            const fileName = crypto.randomUUID() + ext;
             const uploadPath = process.cwd() + '/public/uploads/' + fileName;
             await attachment.mv(uploadPath);
             todo.file_path = '/uploads/' + fileName;
@@ -98,8 +103,9 @@ class TodoController extends Controller {
 
         await todo.save();
 
-        if (req.xhr || req.accepts(['html', 'json']) === 'json') {
-            return res.json({ success: true, todo });
+        if (req.wantsJson()) {
+            const html = global.view('todos.todo_item', { todo });
+            return res.json({ success: true, todo, html });
         }
 
         return res.redirect('/todos');
@@ -112,13 +118,13 @@ class TodoController extends Controller {
         const id = req.params.todo;
         const todo = await Todo.find(id);
 
-        if (!todo || todo.user_id !== req.user().id) {
+        if (!todo || todo.user_id !== Auth.id()) {
             return res.status(403).json({ message: 'Unauthorized' });
         }
 
         await todo.delete();
 
-        if (req.xhr || req.accepts(['html', 'json']) === 'json') {
+        if (req.wantsJson()) {
             return res.json({ success: true });
         }
 
