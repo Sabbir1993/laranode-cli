@@ -60,7 +60,14 @@ class NewCommand {
 
         // 5. Update package.json with project name
         this.step('Updating package name...', () => {
-            const pkgPath = path.join(targetDir, 'package.json');
+            let pkgPath = path.join(targetDir, 'package.json');
+            const stubPath = path.join(targetDir, 'package.json.stub');
+
+            // If package.json doesn't exist but stub does, rename it
+            if (!fs.existsSync(pkgPath) && fs.existsSync(stubPath)) {
+                fs.renameSync(stubPath, pkgPath);
+            }
+
             if (fs.existsSync(pkgPath)) {
                 let pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
                 pkg.name = name;
