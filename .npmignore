@@ -1,2 +1,22 @@
-node_modules
-.git
+# Exclude development files
+node_modules/
+.git/
+.gitignore
+.npmignore
+package-lock.json
+
+# Exclude antigravity/brain files
+.gemini/
+.antigravityignore
+
+# Exclude any parent framework files if they exist
+../
+laranode/
+
+# Include only these
+!bin/
+!src/
+!stubs/
+!package.json
+!README.md
+!LICENSE

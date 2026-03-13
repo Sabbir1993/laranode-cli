@@ -1,6 +1,6 @@
 {
     "name": "laranode-cli",
-    "version": "1.0.017",
+    "version": "1.0.18",
     "description": "The LaraNode Framework CLI Installer",
     "author": "Sabbir Hosain Chowdury <sabbirchowdury000@gmail.com>",
     "main": "bin/laranode.js",
