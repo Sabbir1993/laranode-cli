@@ -1,4 +1,4 @@
-# Exclude development files
+# Exclude specific development files
 node_modules/
 .git/
 .gitignore
@@ -9,9 +9,6 @@ package-lock.json
 .gemini/
 .antigravityignore
 
-# Exclude any parent framework files if they exist
-../
-laranode/
 
 # Include only these
 !bin/
