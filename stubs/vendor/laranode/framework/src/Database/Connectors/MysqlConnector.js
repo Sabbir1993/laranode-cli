@@ -14,10 +14,18 @@ class MysqlConnector {
                 user: this.config.username,
                 password: this.config.password,
                 database: this.config.database,
+                timezone: this.config.timezone || 'local',
                 waitForConnections: true,
                 connectionLimit: 10,
                 queueLimit: 0
             });
+
+            // Set strict mode if enabled
+            if (this.config.strict) {
+                this.pool.on('connection', (connection) => {
+                    connection.query("SET SESSION sql_mode='STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION'");
+                });
+            }
         }
         return this.pool;
     }

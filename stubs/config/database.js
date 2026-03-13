@@ -25,6 +25,8 @@ module.exports = {
             database: env('DB_DATABASE', 'laranode'),
             username: env('DB_USERNAME', 'root'),
             password: env('DB_PASSWORD', ''),
+            timezone: env('DB_TIMEZONE', '+06:00'),
+            strict: env('DB_STRICT', true),
             pool: {
                 min: 2,
                 max: 10,

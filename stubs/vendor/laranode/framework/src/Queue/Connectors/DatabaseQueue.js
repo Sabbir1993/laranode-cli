@@ -58,6 +58,7 @@ class DatabaseQueue {
             return {
                 id: jobRecord.id,
                 payload: jobRecord.payload,
+                queue: queueName,
                 attempts: jobRecord.attempts + 1,
                 delete: async () => {
                     await DB.table(this.table).where('id', jobRecord.id).delete();
