@@ -282,6 +282,25 @@ function response() {
     return new Response(expressRes);
 }
 
+/**
+ * Escape HTML entities - Laravel's e() helper
+ * Supports HtmlString objects that bypass escaping
+ * @param {*} value 
+ * @returns {string}
+ */
+function e(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'object' && typeof value.toHtmlString === 'function') {
+        return value.toHtmlString();
+    }
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Attach to global scope for Laravel-like experience
 global.setBasePath = setBasePath;
 global.base_path = base_path;
@@ -305,6 +324,7 @@ global.encrypt = encrypt;
 global.decrypt = decrypt;
 global.request = request;
 global.response = response;
+global.e = e;
 
 module.exports = {
     setBasePath,
@@ -328,5 +348,6 @@ module.exports = {
     encrypt,
     decrypt,
     request,
-    response
+    response,
+    e
 };
