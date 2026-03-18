@@ -1,25 +1,32 @@
+<h1 align="center">LaraNode</h1>
 <p align="center">
-  <h1 align="center">LaraNode</h1>
-  <p align="center">A Laravel-Inspired Node.js Framework for Web Artisans</p>
+  <strong>A Laravel-Inspired Node.js Framework for Web Artisans</strong>
 </p>
 
 <p align="center">
-  <a href="#installation">Installation</a> •
+  <a href="https://www.npmjs.com/package/laranode-cli"><img src="https://img.shields.io/npm/v/laranode-cli.svg?style=for-the-badge&color=blue" alt="NPM Version" /></a>
+  <a href="https://github.com/Sabbir1993/laranode/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/laranode.svg?style=for-the-badge&color=blue" alt="License" /></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node.js-%3E%3D_18.0-green.svg?style=for-the-badge" alt="Node.js Version" /></a>
+</p>
+
+<p align="center">
+  <a href="#about-laranode">About</a> •
   <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a> •
-  <a href="#license">License</a>
+  <a href="#contributing">Contributing</a>
 </p>
 
 ---
 
-## About LaraNode
+## 💡 About LaraNode
 
 LaraNode is a powerful, expressive, and elegant Node.js framework designed to mirror the architecture and developer experience of Laravel. Built on top of Express.js, it provides a robust foundation for building modern web applications with a familiar, elegant API.
 
 If you know Laravel, you already know LaraNode.
 
-## Installation
+## 🚀 Installation
 
 ### Using LaraNode CLI (Recommended)
 
@@ -53,7 +60,7 @@ cp .env.example .env
 node server.js
 ```
 
-## Features
+## ✨ Features
 
 | Feature | Description |
 |---|---|
@@ -83,7 +90,7 @@ node server.js
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ### Directory Structure
 
@@ -126,9 +133,13 @@ my-app/
 
 ---
 
-## Documentation
+## 📚 Documentation
 
-### Routing
+*(Click on a section below to expand the detailed API documentation)*
+
+<details>
+<summary><strong>🛣️ Routing</strong></summary>
+<br>
 
 Define routes in `routes/web.js` (with session & CSRF) or `routes/api.js` (stateless):
 
@@ -156,7 +167,13 @@ Route.delete('/users/{user}', 'UserController@destroy');
 
 ---
 
-### Controllers
+</details>
+
+---
+
+<details>
+<summary><strong>🎛️ Controllers</strong></summary>
+<br>
 
 Controllers reside in `app/Http/Controllers/`:
 
@@ -187,7 +204,13 @@ module.exports = HomeController;
 
 ---
 
-### Loquent ORM
+</details>
+
+---
+
+<details>
+<summary><strong>🗄️ Loquent ORM</strong></summary>
+<br>
 
 Loquent is LaraNode's Active Record ORM, inspired by Laravel's Eloquent:
 
@@ -565,7 +588,13 @@ await Post.where('id', 1).forceDelete();
 
 ---
 
-### Authentication
+</details>
+
+---
+
+<details>
+<summary><strong>🛡️ Authentication</strong></summary>
+<br>
 
 LaraNode provides session-based authentication and Sanctum-style API tokens.
 
@@ -616,7 +645,13 @@ Route.post('/password/reset', 'PasswordController@reset').name('password.update'
 
 ---
 
-### Middleware
+</details>
+
+---
+
+<details>
+<summary><strong>🧩 Middleware</strong></summary>
+<br>
 
 #### Built-in Middleware
 
@@ -676,7 +711,13 @@ module.exports = function (req, res, next) {
 
 ---
 
-### Validation
+</details>
+
+---
+
+<details>
+<summary><strong>✅ Validation</strong></summary>
+<br>
 
 ```javascript
 // Inline validation in a controller
@@ -702,7 +743,13 @@ async store(req, res) {
 
 ---
 
-### Facades
+</details>
+
+---
+
+<details>
+<summary><strong>🏗️ Facades</strong></summary>
+<br>
 
 Facades provide a static-like interface to services in the container:
 
@@ -805,7 +852,13 @@ Log.error('Payment failed', { orderId: 123 });
 
 ---
 
-### Views (Edge Templating)
+</details>
+
+---
+
+<details>
+<summary><strong>✨ Views (Edge Templating)</strong></summary>
+<br>
 
 LaraNode uses Edge templates (`.edge` files) — a Blade-like engine:
 
@@ -854,7 +907,13 @@ async index(req, res) {
 
 ---
 
-### Configuration
+</details>
+
+---
+
+<details>
+<summary><strong>⚙️ Configuration</strong></summary>
+<br>
 
 Configuration files in `config/` use environment variables:
 
@@ -886,7 +945,13 @@ DB_DATABASE=laranode
 
 ---
 
-### Database
+</details>
+
+---
+
+<details>
+<summary><strong>💾 Database</strong></summary>
+<br>
 
 #### Supported Databases
 
@@ -925,7 +990,13 @@ const result = await DB.raw('SELECT * FROM users WHERE id = ?', [1]);
 
 ---
 
-### Pagination
+</details>
+
+---
+
+<details>
+<summary><strong>📄 Pagination</strong></summary>
+<br>
 
 LaraNode provides two types of paginators — `paginate()` for full page-number navigation and `simplePaginate()` for lightweight previous/next.
 
@@ -990,7 +1061,13 @@ async index(req, res) {
 
 ---
 
-### Queues
+</details>
+
+---
+
+<details>
+<summary><strong>📮 Queues</strong></summary>
+<br>
 
 LaraNode includes a database-driven queue system for processing jobs in the background, similar to Laravel.
 
@@ -1056,7 +1133,13 @@ Run `node artisan migrate` to create the `jobs` and `failed_jobs` tables.
 
 ---
 
-### Broadcasting
+</details>
+
+---
+
+<details>
+<summary><strong>📡 Broadcasting</strong></summary>
+<br>
 
 Powered by Socket.io, LaraNode's broadcasting allows you to share server-side events with your client-side JavaScript application in real-time.
 
@@ -1079,7 +1162,13 @@ Event.dispatch(new OrderShipped(order));
 
 ---
 
-### Testing
+</details>
+
+---
+
+<details>
+<summary><strong>🧪 Testing</strong></summary>
+<br>
 
 LaraNode features a robust testing framework inspired by Laravel. It supports `artisan test` and provides a `TestCase` class for building expressive feature tests.
 
@@ -1104,7 +1193,13 @@ node artisan test
 
 ---
 
-### Performance
+</details>
+
+---
+
+<details>
+<summary><strong>⚡ Performance</strong></summary>
+<br>
 
 Optimize your application for production by caching performance-heavy components.
 
@@ -1116,7 +1211,13 @@ node artisan config:cache
 node artisan route:cache
 ```
 
-### Service Providers
+</details>
+
+---
+
+<details>
+<summary><strong>🔌 Service Providers</strong></summary>
+<br>
 
 Register services in `config/app.js`:
 
@@ -1139,7 +1240,13 @@ providers: [
 
 ---
 
-### Exception Handling
+</details>
+
+---
+
+<details>
+<summary><strong>⚠️ Exception Handling</strong></summary>
+<br>
 
 Customize error handling in `app/Exceptions/Handler.js`:
 
@@ -1172,7 +1279,13 @@ class Handler extends BaseHandler {
 
 ---
 
-### Log Viewer
+</details>
+
+---
+
+<details>
+<summary><strong>📊 Log Viewer</strong></summary>
+<br>
 
 LaraNode includes a built-in web-based log viewer with severity filtering:
 
@@ -1195,7 +1308,13 @@ Visit `/logs` to view application logs with:
 
 ---
 
-### Artisan CLI
+</details>
+
+---
+
+<details>
+<summary><strong>📟 Artisan CLI</strong></summary>
+<br>
 
 The LaraNode Artisan CLI provides commands for scaffolding, database management, and running your application.
 
@@ -1247,7 +1366,13 @@ Here is a full list of available Artisan commands:
 
 ---
 
-### Events & Listeners
+</details>
+
+---
+
+<details>
+<summary><strong>🎧 Events & Listeners</strong></summary>
+<br>
 
 LaraNode provides a robust event dispatching system similar to Laravel. Listeners are automatically resolved through the service container.
 
@@ -1265,7 +1390,13 @@ Register your listeners in `app/Providers/EventServiceProvider.js`.
 
 ---
 
-### Cache
+</details>
+
+---
+
+<details>
+<summary><strong>🚀 Cache</strong></summary>
+<br>
 
 The LaraNode Cache system provides a unified API for various cache drivers. Currently supported drivers: `file` and `memory`.
 
@@ -1286,7 +1417,13 @@ const users = await Cache.remember('users', 60, async () => {
 
 ---
 
-### Storage / Filesystem
+</details>
+
+---
+
+<details>
+<summary><strong>📁 Storage / Filesystem</strong></summary>
+<br>
 
 LaraNode provides a powerful filesystem abstraction matching Laravel's Storage API.
 
@@ -1339,7 +1476,13 @@ async upload(req, res) {
 
 ---
 
-### Mail
+</details>
+
+---
+
+<details>
+<summary><strong>📩 Mail</strong></summary>
+<br>
 
 LaraNode's Mail system, built on top of Nodemailer, allows for expressive email creation via Mailable classes.
 
@@ -1367,7 +1510,13 @@ class WelcomeMail extends Mailable {
 
 ---
 
-### Notifications
+</details>
+
+---
+
+<details>
+<summary><strong>🔔 Notifications</strong></summary>
+<br>
 
 LaraNode allows you to send notifications across various channels (Mail, Database).
 
@@ -1404,7 +1553,13 @@ await user.notify(new InvoicePaid(invoice));
 
 ---
 
-### Helper Functions
+</details>
+
+---
+
+<details>
+<summary><strong>🛠️ Helper Functions</strong></summary>
+<br>
 
 LaraNode provides global helper functions:
 
@@ -1418,7 +1573,11 @@ use('App/Models/User')            // Resolve from service container
 
 ---
 
-## Environment Variables
+</details>
+
+---
+
+## 🔧 Environment Variables
 
 | Variable | Description | Default |
 |---|---|---|
@@ -1440,7 +1599,7 @@ use('App/Models/User')            // Resolve from service container
 
 ---
 
-## Sample Application
+## 📱 Sample Application
 
 The scaffolded project includes a complete sample application:
 
@@ -1474,10 +1633,10 @@ Route.get('/user', async (req, res) => {
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## 📜 License
 
 The LaraNode framework is open-sourced software licensed under the [MIT license](LICENSE).
