@@ -44,6 +44,9 @@ class FilesystemManager {
             case 'local':
                 const LocalDriver = require('./Drivers/LocalDriver');
                 return new LocalDriver(diskConfig);
+            case 's3':
+                const S3Driver = require('./Drivers/S3Driver');
+                return new S3Driver(diskConfig);
             default:
                 throw new Error(`Filesystem driver [${diskConfig.driver}] is not supported. Install the appropriate driver package.`);
         }

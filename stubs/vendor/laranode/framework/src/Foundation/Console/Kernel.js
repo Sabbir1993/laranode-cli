@@ -47,6 +47,7 @@ class Kernel {
             require('../../Console/Commands/ScheduleRunCommand'),
             require('../../Queue/Console/QueueWorkCommand'),
             require('./Commands/StorageLinkCommand'),
+            require('./Commands/TinkerCommand'),
         ];
 
         for (const commandClass of builtInCommands) {
