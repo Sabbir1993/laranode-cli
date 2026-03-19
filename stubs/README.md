@@ -74,6 +74,8 @@ node server.js
 | ✅ **Validation** | Form request validation with 20+ built-in rules and custom rule support |
 | 🔐 **Encryption & Hashing** | AES-256 encryption and bcrypt hashing via Facades |
 | 📟 **Artisan CLI** | Command-line interface for migrations, scaffolding, and dev server |
+| 💻 **Tinker REPL** | Interactive Node.js shell with top-level await and global context injection |
+| 🪟 **Inertia.js Server** | Native server side protocol rendering for Vue/React SPAs without an API |
 | 📊 **Log Viewer** | Built-in web-based log viewer with severity filtering and pagination |
 | 🌐 **Translations** | Multi-language support with language files and the `Lang` facade |
 | 🗃️ **Multi-Database** | SQLite and MySQL support with connection pooling |
@@ -1366,6 +1368,108 @@ Here is a full list of available Artisan commands:
 
 ---
 
+</details>
+
+---
+
+<details>
+<summary><strong>💻 Tinker (Interactive REPL)</strong></summary>
+<br>
+
+LaraNode Tinker provides a powerful, interactive Node.js REPL environment where you can interact directly with your completely booted application.
+
+```bash
+node artisan tinker
+```
+
+Once inside Tinker, you can write JavaScript natively, wait on Promises (top-level await), and all your `app/Models/` classes are auto-loaded! Standard Facades (`DB`, `Route`, `Hash`, `Cache`, etc.) are also injected globally.
+
+```javascript
+// Auto-loaded Models & Top-Level Await
+>>> await User.first()
+User { id: 1, ... }
+
+// Interactive debugging
+>>> await DB.table('users').count()
+42
+
+// Global Helpers
+>>> env('APP_PORT')
+'3000'
+```
+
+---
+
+</details>
+
+---
+
+<details>
+<summary><strong>🪟 Inertia.js (Native SPAs)</strong></summary>
+<br>
+
+LaraNode comes with robust, out-of-the-box support for [Inertia.js](https://inertiajs.com).
+This allows you to build modern single-page apps using React, Vue, or Svelte—all powered natively by your LaraNode controllers instead of maintaining a separate API!
+
+The built-in `HandleInertiaRequests` middleware automatically handles asset versioning and global data sharing (like the current Auth User and Flash Messages) on every page transition.
+
+### 1. Edge HTML Shell
+
+Create your root template `resources/views/app.edge`. Notice how LaraNode automatically handles sending the initial payload using `{!! jsonPage !!}`:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LaraNode App</title>
+    <!-- React Refresh Preamble (Required for Vite React Dev Mode) -->
+    <script type="module">
+        import RefreshRuntime from "http://localhost:5173/@react-refresh";
+        RefreshRuntime.injectIntoGlobalHook(window);
+        window.$RefreshReg$ = () => {};
+        window.$RefreshSig$ = () => (type) => type;
+        window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
+    <script type="module" src="http://localhost:5173/@vite/client"></script>
+    <script type="module" src="http://localhost:5173/resources/js/app.jsx"></script>
+</head>
+<body>
+    <!-- The Inertia Payload is mounted here unescaped natively -->
+    <div id="app" data-page="{!! jsonPage !!}"></div>
+</body>
+</html>
+```
+
+### 2. Vite Configuration
+
+Configure `vite.config.js` to bundle your assets:
+
+```javascript
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+    plugins: [react()],
+    build: {
+        outDir: 'public/build',
+        rollupOptions: { input: 'resources/js/app.jsx' },
+    },
+});
+```
+
+### 3. Controller Usage
+
+Using Inertia from a LaraNode controller is identical to Laravel. The framework handles rendering the HTML shell or strictly returning JSON for partial reloads automatically behind the scenes!
+
+```javascript
+// A standard Express controller method
+index(req, res) {
+    const users = await DB.table('users').get();
+    
+    // Renders your 'resources/js/Pages/Users/Index.jsx' seamlessly!
+    return res.inertia('Users/Index', { users });
+}
+```
 </details>
 
 ---

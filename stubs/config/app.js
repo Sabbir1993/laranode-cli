@@ -40,7 +40,6 @@ module.exports = {
     |--------------------------------------------------------------------------
     */
     locale: env('APP_LOCALE', 'en'),
-    timezone: env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------
@@ -73,6 +72,7 @@ module.exports = {
         require(base_path('vendor/laranode/framework/src/Filesystem/FilesystemServiceProvider')),
         require(base_path('vendor/laranode/framework/src/Mail/MailServiceProvider')),
         require(base_path('vendor/laranode/framework/src/Notifications/NotificationServiceProvider')),
+        require(base_path('vendor/laranode/framework/src/Support/Inertia/InertiaServiceProvider')),
 
         // Application Service Providers...
         require(base_path('app/Providers/AppServiceProvider')),

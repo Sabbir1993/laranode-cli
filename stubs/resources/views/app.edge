@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>LaraNode</title>
+    <!-- React Refresh Preamble (Required for Vite React Dev Mode) -->
+    <script type="module">
+        import RefreshRuntime from "http://localhost:3335/@react-refresh";
+        RefreshRuntime.injectIntoGlobalHook(window);
+        window.$RefreshReg$ = () => {};
+        window.$RefreshSig$ = () => (type) => type;
+        window.__vite_plugin_react_preamble_installed__ = true;
+    </script>
+    <!-- Vite Client and App Entry -->
+    <script type="module" src="http://localhost:3335/@vite/client"></script>
+    <script type="module" src="http://localhost:3335/resources/js/app.jsx"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 h-screen w-screen m-0 p-0 font-sans tracking-tight">
+    <div id="app" data-page="{!! jsonPage !!}"></div>
+</body>
+</html>
