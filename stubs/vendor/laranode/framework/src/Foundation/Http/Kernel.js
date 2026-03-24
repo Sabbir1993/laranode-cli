@@ -131,20 +131,22 @@ class Kernel {
 
         // 5. Global Error Handler
         this.expressApp.use((err, req, res, next) => {
-            let ExceptionHandler;
-            try {
-                // Try user's app handler first (app/Exceptions/Handler.js)
-                ExceptionHandler = use('App/Exceptions/Handler');
-            } catch (e) {
-                // Fall back to base framework handler
-                ExceptionHandler = use('laranode/Foundation/Exceptions/Handler');
-            }
-            const handler = new ExceptionHandler(this.app);
-            if (typeof handler.register === 'function') {
-                handler.register();
-            }
-            handler.report(err);
-            handler.render(err, req, res);
+            HttpContext.run({ req, res }, () => {
+                let ExceptionHandler;
+                try {
+                    // Try user's app handler first (app/Exceptions/Handler.js)
+                    ExceptionHandler = use('App/Exceptions/Handler');
+                } catch (e) {
+                    // Fall back to base framework handler
+                    ExceptionHandler = use('laranode/Foundation/Exceptions/Handler');
+                }
+                const handler = new ExceptionHandler(this.app);
+                if (typeof handler.register === 'function') {
+                    handler.register();
+                }
+                handler.report(err);
+                handler.render(err, req, res);
+            });
         });
 
         return this.expressApp;

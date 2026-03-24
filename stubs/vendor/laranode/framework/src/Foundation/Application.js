@@ -4,6 +4,10 @@ const path = require('path');
 class Application extends Container {
     constructor(basePath = null) {
         super();
+        this.serviceProviders = [];
+        this.booted = false;
+        this.hasBeenBootstrapped = false;
+
         if (basePath) {
             this.setBasePath(basePath);
         }
@@ -69,6 +73,10 @@ class Application extends Container {
      * @param {boolean} force 
      */
     register(provider, force = false) {
+        if (!provider) {
+            return null;
+        }
+
         // Handle string/class instance/object instance
         let instance;
         if (typeof provider === 'string') {
@@ -80,17 +88,18 @@ class Application extends Container {
             instance = provider; // It's already instantiated
         }
 
-        this.serviceProviders = this.serviceProviders || [];
-
         if (!force && this.getProvider(instance)) {
             return this.getProvider(instance);
         }
 
-        instance.register();
+        if (instance && typeof instance.register === 'function') {
+            instance.register();
+        }
+        
         this.serviceProviders.push(instance);
 
         // If the application has already booted, we will boot this provider immediately.
-        if (this.booted) {
+        if (this.booted && instance && typeof instance.boot === 'function') {
             instance.boot();
         }
 
@@ -101,8 +110,17 @@ class Application extends Container {
      * Get the registered service provider instance if it exists.
      */
     getProvider(provider) {
-        const name = typeof provider === 'string' ? provider : provider.constructor.name;
-        return this.serviceProviders.find(p => p.constructor.name === name);
+        if (!provider) {
+            return null;
+        }
+
+        const name = typeof provider === 'string' ? provider : (provider.constructor ? provider.constructor.name : null);
+        
+        if (!name) {
+            return null;
+        }
+
+        return this.serviceProviders.find(p => p && p.constructor && p.constructor.name === name);
     }
 
     /**

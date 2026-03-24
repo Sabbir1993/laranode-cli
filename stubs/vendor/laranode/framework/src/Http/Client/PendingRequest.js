@@ -97,7 +97,9 @@ class PendingRequest {
      * @returns {string}
      */
     buildUrl(url, query = {}) {
-        let fullUrl = this.baseUrl ? `${this.baseUrl}${url.startsWith('/') ? url : `/${url}`}` : url;
+        let fullUrl = (this.baseUrl && !url.startsWith('http')) 
+            ? `${this.baseUrl}${url.startsWith('/') ? url : `/${url}`}` 
+            : url;
 
         const mergedQuery = { ...this.queryParams, ...query };
         if (Object.keys(mergedQuery).length > 0) {

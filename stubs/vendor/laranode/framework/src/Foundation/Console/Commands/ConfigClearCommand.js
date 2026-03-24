@@ -11,10 +11,21 @@ class ConfigClearCommand extends Command {
     }
 
     async handle() {
-        const cacheFile = base_path('bootstrap/cache/config.json');
+        const jsonCache = base_path('bootstrap/cache/config.json');
+        const jsCache = base_path('bootstrap/cache/config.js');
+        let cleared = false;
 
-        if (fs.existsSync(cacheFile)) {
-            fs.unlinkSync(cacheFile);
+        if (fs.existsSync(jsonCache)) {
+            fs.unlinkSync(jsonCache);
+            cleared = true;
+        }
+
+        if (fs.existsSync(jsCache)) {
+            fs.unlinkSync(jsCache);
+            cleared = true;
+        }
+
+        if (cleared) {
             this.info('Configuration cache cleared!');
         } else {
             this.info('No configuration cache found to clear.');

@@ -12,10 +12,23 @@ class Repository {
      */
     loadConfigurationFiles(configPath) {
         if (typeof base_path === 'function') {
-            const cacheFile = base_path('bootstrap/cache/config.json');
-            if (fs.existsSync(cacheFile)) {
+            const jsCache = base_path('bootstrap/cache/config.js');
+            const jsonCache = base_path('bootstrap/cache/config.json');
+
+            if (fs.existsSync(jsCache)) {
                 try {
-                    this.items = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+                    // Use require to load the JS cache
+                    delete require.cache[require.resolve(jsCache)];
+                    this.items = require(jsCache);
+                    return;
+                } catch (e) {
+                    // fall through if corrupt
+                }
+            }
+
+            if (fs.existsSync(jsonCache)) {
+                try {
+                    this.items = JSON.parse(fs.readFileSync(jsonCache, 'utf8'));
                     return;
                 } catch (e) {
                     // fall through if corrupt

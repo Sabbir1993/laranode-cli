@@ -107,6 +107,16 @@ class Request {
     }
 
     /**
+     * Get all or a specific header from the request.
+     * @param {string|null} key 
+     * @param {*} defaultValue 
+     * @returns {string|Object|null}
+     */
+    headers() {
+        return this.req.headers;
+    }
+
+    /**
      * Get the bearer token from the request headers.
      * @returns {string|null}
      */
@@ -132,6 +142,14 @@ class Request {
      */
     url() {
         return this.req.originalUrl || this.req.url;
+    }
+
+    /**
+     * Get the request path.
+     * @returns {string}
+     */
+    path() {
+        return this.req.path;
     }
 
     /**
@@ -249,6 +267,12 @@ class Request {
      * @param {Object} messages 
      * @returns {Promise<Object>} // Return Promise
      */
+    /**
+     * Validate the request with the given rules.
+     * @param {Object} rules 
+     * @param {Object} messages 
+     * @returns {Promise<Object>} // Return Promise
+     */
     async validate(rules, messages = {}) {
         const Validator = use('laranode/Validation/Validator');
         const validator = Validator.make(this.all(), rules, messages);
@@ -259,6 +283,16 @@ class Request {
         }
 
         return await validator.validated();
+    }
+
+    /**
+     * Merge new input into the current request's input.
+     * @param {Object} input 
+     * @returns {this}
+     */
+    merge(input) {
+        this.req.body = { ...(this.req.body || {}), ...input };
+        return this;
     }
 }
 
