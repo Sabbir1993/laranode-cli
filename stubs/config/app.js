@@ -34,12 +34,14 @@ module.exports = {
     */
     port: env('APP_PORT', 8000),
 
+    locale: env('APP_LOCALE', 'en'),
+
     /*
     |--------------------------------------------------------------------------
-    | Application Locale Configuration
+    | Application Timezone Configuration
     |--------------------------------------------------------------------------
     */
-    locale: env('APP_LOCALE', 'en'),
+    timezone: env('APP_TIMEZONE', 'Asia/Dhaka'),
 
     /*
     |--------------------------------------------------------------------------

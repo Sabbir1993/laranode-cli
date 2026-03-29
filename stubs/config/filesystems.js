@@ -1,3 +1,5 @@
+const EncDec = use('App/Services/EncDecService');
+
 module.exports = {
     /*
     |--------------------------------------------------------------------------
@@ -8,7 +10,7 @@ module.exports = {
     | by the framework. The "local" disk, as well as a variety of cloud
     | based disks are available to your application.
     |
-    | Supported: "local"
+    | Supported: "local", "public", "s3"
     |
     */
 
@@ -34,6 +36,15 @@ module.exports = {
             driver: 'local',
             root: storage_path('app/public'),
             url: '/storage',
+        },
+
+        s3: {
+            driver: 's3',
+            key: EncDec.__decrypt(env('AWS_ACCESS_KEY_ID')),
+            secret: EncDec.__decrypt(env('AWS_SECRET_ACCESS_KEY')),
+            region: EncDec.__decrypt(env('AWS_DEFAULT_REGION')),
+            bucket: EncDec.__decrypt(env('AWS_BUCKET')),
+            url: env('IMG_PATH'),
         },
     },
 };

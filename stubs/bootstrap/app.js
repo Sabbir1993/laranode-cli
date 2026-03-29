@@ -41,6 +41,9 @@ const config = new ConfigRepository();
 config.loadConfigurationFiles(path.join(basePath, 'config'));
 app.instance('config', config);
 
+// Set application timezone
+process.env.TZ = config.get('app.timezone', 'UTC');
+
 /*
 |--------------------------------------------------------------------------
 | Register Service Providers
@@ -48,7 +51,12 @@ app.instance('config', config);
 */
 
 const providers = config.get('app.providers') || [];
-for (const provider of providers) {
+for (let i = 0; i < providers.length; i++) {
+    const provider = providers[i];
+    if (!provider) {
+        console.error(`CRITICAL: A null or undefined provider was found in config/app.js at index ${i}`);
+        continue;
+    }
     app.register(provider);
 }
 

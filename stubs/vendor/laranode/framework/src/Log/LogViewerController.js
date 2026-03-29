@@ -27,13 +27,13 @@ class LogViewerController {
         .sidebar { background: #161b22; border-right: 1px solid #30363d; width: 320px; min-width: 320px; display: flex; flex-direction: column; }
         .main-content { flex: 1; display: flex; flex-direction: column; background: #0d1117; overflow: hidden; }
         
-        .file-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+        .file-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; position: relative; group; }
         .file-item:hover { background: #21262d; }
         .file-item.active { background: #1f6feb22; border-left: 3px solid #1f6feb; }
         .file-name { font-size: 0.85rem; font-weight: 500; word-break: break-all; }
         .file-size { font-size: 0.75rem; color: #8b949e; white-space: nowrap; margin-left: 10px; }
         
-        .log-header { background: #161b22; border-bottom: 1px solid #30363d; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .log-header { background: #161b22; border-bottom: 1px solid #30363d; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .log-table-header { display: grid; grid-template-columns: 90px 160px 70px 1fr; gap: 10px; padding: 10px 20px; font-size: 0.75rem; font-weight: 600; color: #8b949e; border-bottom: 1px solid #30363d; text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
         
         .log-entry { border-bottom: 1px solid #21262d; cursor: pointer; transition: background 0.15s; }
@@ -52,48 +52,38 @@ class LogViewerController {
         .badge.debug { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
         
         .log-detail { display: none; padding: 14px 20px; background: #0c0e14; border-top: 1px dashed #30363d; }
-        .log-detail-label { font-size: 0.7rem; font-weight: 600; color: #58a6ff; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
         .log-detail-message { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.8rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
-        .log-detail-stack { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.75rem; color: #8b949e; white-space: pre-wrap; word-break: break-all; line-height: 1.5; margin-top: 12px; padding-top: 12px; border-top: 1px solid #21262d; }
         .log-entry.expanded .log-detail { display: block; }
-        .log-entry.expanded { background: #161b22; }
-        .log-entry.expanded.error-entry { background: rgba(248,81,73,0.03); }
         
-        .pagination { display: flex; gap: 5px; align-items: center; }
-        .btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s; }
-        .btn:hover:not(:disabled) { background: #30363d; }
+        .btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover:not(:disabled) { background: #30363d; color: #fff; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger:hover { background: #f8514922; border-color: #f8514988; color: #f85149; }
         
-        .severity-filters { display: flex; gap: 6px; align-items: center; }
-        .filter-btn { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid #30363d; background: #21262d; color: #8b949e; letter-spacing: 0.03em; }
-        .filter-btn:hover { background: #30363d; color: #c9d1d9; }
-        .filter-btn.active { color: #fff; }
-        .filter-btn.active[data-filter="all"] { background: #1f6feb; border-color: #1f6feb; }
-        .filter-btn.active[data-filter="error"] { background: rgba(248,81,73,0.25); border-color: rgba(248,81,73,0.6); color: #f85149; }
-        .filter-btn.active[data-filter="warning"] { background: rgba(210,153,34,0.25); border-color: rgba(210,153,34,0.6); color: #d29922; }
-        .filter-btn.active[data-filter="info"] { background: rgba(88,166,255,0.25); border-color: rgba(88,166,255,0.6); color: #58a6ff; }
-        .filter-btn.active[data-filter="debug"] { background: rgba(139,148,158,0.2); border-color: rgba(139,148,158,0.5); color: #c9d1d9; }
+        .filter-btn { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid #30363d; background: #21262d; color: #8b949e; }
+        .filter-btn.active { color: #fff; border-color: #1f6feb; background: #1f6feb; }
         
-        .loader { border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .search-input { background: #0d1117; border: 1px solid #30363d; color: #e2e8f0; padding: 6px 12px 6px 36px; border-radius: 6px; font-size: 0.85rem; width: 240px; transition: border-color 0.2s; }
+        .search-input:focus { outline: none; border-color: #1f6feb; box-shadow: 0 0 0 3px rgba(31,111,235,0.15); }
+        .search-container { position: relative; }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #8b949e; pointer-events: none; }
     </style>
 </head>
 <body class="flex">
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="p-4 border-b border-[#30363d]">
-            <h1 class="text-xl font-semibold text-white flex items-center gap-2">
-                Log Viewer
-            </h1>
+        <div class="p-4 border-b border-[#30363d] flex justify-between items-center">
+            <h1 class="text-xl font-semibold text-white">Log Viewer</h1>
+            <div id="loadingIndicator" class="hidden">
+                 <svg class="animate-spin h-5 w-5 text-[#58a6ff]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </div>
         </div>
         <div class="p-4 text-xs font-semibold text-[#8b949e] uppercase tracking-wider border-b border-[#30363d] flex justify-between">
-            <span>Log files on Local</span>
+            <span>Server Logs</span>
             <span id="filesCount">0 files</span>
         </div>
-        <div id="fileList" class="flex-1 overflow-y-auto">
-            <!-- Files injected here -->
-        </div>
+        <div id="fileList" class="flex-1 overflow-y-auto"></div>
     </div>
 
     <!-- Main Content -->
@@ -101,48 +91,53 @@ class LogViewerController {
         <!-- Header -->
         <div class="log-header">
             <div class="flex items-center gap-4">
-                <span id="entriesCount" class="text-sm border border-[#30363d] px-3 py-1.5 rounded-md bg-[#21262d]">0 entries</span>
+                <div class="search-container">
+                    <svg class="search-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search logs..." oninput="handleSearch(this.value)">
+                </div>
                 <div class="severity-filters">
                     <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
                     <button class="filter-btn" data-filter="error" onclick="setFilter('error')">Error</button>
                     <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">Warning</button>
-                    <button class="filter-btn" data-filter="info" onclick="setFilter('info')">Info</button>
-                    <button class="filter-btn" data-filter="debug" onclick="setFilter('debug')">Debug</button>
                 </div>
-                <div id="loadingIndicator" class="loader"></div>
             </div>
-            <div class="flex items-center gap-3">
-                <span class="text-xs text-[#8b949e]">25 items per page</span>
-                <div class="pagination">
-                    <button id="btnPrev" class="btn" disabled>&larr;</button>
-                    <span id="pageIndicator" class="text-sm px-2">Page 1</span>
-                    <button id="btnNext" class="btn" disabled>&rarr;</button>
+
+            <div class="flex items-center gap-4">
+                <span id="entriesCount" class="text-xs text-[#8b949e]">0 entries</span>
+                <div class="flex items-center gap-2">
+                    <button id="btnClearLog" class="btn btn-danger" onclick="clearCurrentLog()">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Clear
+                    </button>
+                    <div class="h-6 w-[1px] bg-[#30363d] mx-1"></div>
+                    <div class="pagination">
+                        <button id="btnPrev" class="btn" disabled>&larr;</button>
+                        <span id="pageIndicator" class="text-xs font-medium px-2">Page 1</span>
+                        <button id="btnNext" class="btn" disabled>&rarr;</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Log Table Header -->
+        <!-- Log Table -->
         <div class="log-table-header">
             <div>Severity</div>
             <div>Datetime</div>
             <div>Env</div>
             <div>Message</div>
         </div>
-
-        <!-- Log Data -->
-        <div id="logList" class="flex-1 overflow-y-auto w-full">
-            <div class="flex h-full items-center justify-center text-[#8b949e]">Select a file to view logs...</div>
-        </div>
+        <div id="logList" class="flex-1 overflow-y-auto"></div>
     </div>
 
     <script>
         const LOG_API_ENDPOINT = '${endpoint}/api';
-        
         let files = [];
         let currentFile = '';
         let currentPage = 1;
         let totalPages = 1;
         let currentFilter = 'all';
+        let searchTimeout;
+        let searchQuery = '';
 
         const ui = {
             fileList: document.getElementById('fileList'),
@@ -155,124 +150,124 @@ class LogViewerController {
             loadingIndicator: document.getElementById('loadingIndicator')
         };
 
+        function handleSearch(val) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchQuery = val;
+                loadFile(currentFile, 1);
+            }, 500);
+        }
+
         function setFilter(filter) {
             currentFilter = filter;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(\`.filter-btn[data-filter="\${filter}"]\`).classList.add('active');
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
             loadFile(currentFile, 1);
         }
 
-        // Initialize
         async function init() {
             try {
                 const res = await fetch(LOG_API_ENDPOINT);
                 const data = await res.json();
                 files = data.files;
                 ui.filesCount.innerText = files.length + ' files';
+                if (files.length > 0) loadFile(files[0].name, 1);
                 renderFiles();
-                
-                if (files.length > 0) {
-                    loadFile(files[0].name, 1);
-                }
-            } catch (e) {
-                console.error('Failed to init', e);
-            }
+            } catch (e) { console.error('Init failed', e); }
         }
 
         function renderFiles() {
             ui.fileList.innerHTML = files.map(f => \`
                 <div class="file-item \${f.name === currentFile ? 'active' : ''}" onclick="loadFile('\${f.name}', 1)">
-                    <span class="file-name">\${f.name}</span>
+                    <span class="file-name flex-1">\${f.name}</span>
                     <span class="file-size">\${f.sizeStr}</span>
+                    <button class="ml-2 p-1 text-[#8b949e] hover:text-red-500 opacity-0 file-item:hover:opacity-100 transition-opacity" 
+                        onclick="event.stopPropagation(); deleteLogFile('\${f.name}')">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                 </div>
             \`).join('');
+            
+            // Re-render to fix the "file-item:hover:opacity-100" which Tailwind doesn't handle natively for nested group-hover easily in inline styles
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.onmouseenter = () => item.querySelector('button').style.opacity = '1';
+                item.onmouseleave = () => item.querySelector('button').style.opacity = '0';
+            });
         }
 
         async function loadFile(fileName, page = 1) {
+            if (!fileName) return;
             currentFile = fileName;
             currentPage = page;
             renderFiles();
-            
-            ui.loadingIndicator.style.display = 'block';
-            ui.logList.innerHTML = '<div class="flex h-full items-center justify-center text-[#8b949e]">Loading...</div>';
+            ui.loadingIndicator.classList.remove('hidden');
             
             try {
                 let url = \`\${LOG_API_ENDPOINT}?file=\${fileName}&page=\${page}\`;
                 if (currentFilter !== 'all') url += \`&level=\${currentFilter}\`;
+                if (searchQuery) url += \`&search=\${encodeURIComponent(searchQuery)}\`;
+                
                 const res = await fetch(url);
                 const data = await res.json();
-                
                 totalPages = data.totalPages;
-                const filterLabel = currentFilter !== 'all' ? currentFilter + ' ' : '';
-                ui.entriesCount.innerText = data.totalEntries + ' ' + filterLabel + 'entries in ' + fileName;
+                ui.entriesCount.innerText = \`\${data.totalEntries} entries\`;
                 ui.pageIndicator.innerText = \`Page \${currentPage} of \${totalPages || 1}\`;
-                
                 ui.btnPrev.disabled = currentPage <= 1;
                 ui.btnNext.disabled = currentPage >= totalPages;
-                
                 renderLogs(data.entries);
             } catch (e) {
-                ui.logList.innerHTML = '<div class="text-red-500 p-5">Error loading logs</div>';
-                console.error(e);
+                ui.logList.innerHTML = '<div class="text-red-500 p-10 flex justify-center">Error loading logs</div>';
             } finally {
-                ui.loadingIndicator.style.display = 'none';
+                ui.loadingIndicator.classList.add('hidden');
             }
         }
 
-        function toggleStack(element) {
-            element.classList.toggle('expanded');
+        async function deleteLogFile(fileName) {
+            if (!confirm(\`Are you sure you want to delete \${fileName}?\`)) return;
+            try {
+                const res = await fetch(\`\${LOG_API_ENDPOINT}?file=\${fileName}\`, { method: 'DELETE' });
+                if (res.ok) {
+                    files = files.filter(f => f.name !== fileName);
+                    ui.filesCount.innerText = files.length + ' files';
+                    if (currentFile === fileName) loadFile(files[0]?.name, 1);
+                    else renderFiles();
+                }
+            } catch (e) { alert('Delete failed'); }
         }
 
-        function getSeverityBadge(sev) {
-            const lower = (sev || 'info').toLowerCase();
-            if (lower.includes('err') || lower.includes('fail') || lower.includes('crit')) return 'error';
-            if (lower.includes('warn')) return 'warning';
-            if (lower.includes('debug')) return 'debug';
-            return 'info';
-        }
-
-        function getSeverityIcon(badge) {
-            if (badge === 'error') return '<svg style="color:#f85149" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm9 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm-.25-6.25a.75.75 0 0 0-1.5 0v3.5a.75.75 0 0 0 1.5 0v-3.5Z"></path></svg>';
-            if (badge === 'warning') return '<svg style="color:#d29922" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575ZM8 5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8 5Zm1 6a1 1 0 1 0-2 0 1 1 0 0 0 2 0Z"></path></svg>';
-            if (badge === 'debug') return '<svg style="color:#8b949e" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM5.78 8.75a9.64 9.64 0 0 0 1.363 4.177c.255.426.542.832.857 1.215.245-.296.551-.705.857-1.215A9.64 9.64 0 0 0 10.22 8.75Zm4.44-1.5a9.64 9.64 0 0 0-1.363-4.177c-.307-.51-.612-.919-.857-1.215a9.927 9.927 0 0 0-.857 1.215A9.64 9.64 0 0 0 5.78 7.25Z"></path></svg>';
-            return '<svg style="color:#58a6ff" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm9 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM7.25 4.75a.75.75 0 0 1 1.5 0v5.5a.75.75 0 0 1-1.5 0v-5.5Z"></path></svg>';
+        async function clearCurrentLog() {
+            if (!currentFile || !confirm(\`Clear all entries in \${currentFile}?\`)) return;
+            try {
+                const res = await fetch(\`\${LOG_API_ENDPOINT}/clear?file=\${currentFile}\`, { method: 'POST' });
+                if (res.ok) loadFile(currentFile, 1);
+            } catch (e) { alert('Clear failed'); }
         }
 
         function renderLogs(entries) {
             if (!entries || entries.length === 0) {
-                ui.logList.innerHTML = '<div class="flex h-full items-center justify-center text-[#8b949e]">No entries found' + (currentFilter !== 'all' ? ' for "' + currentFilter + '" filter' : '') + '.</div>';
+                ui.logList.innerHTML = '<div class="flex h-full items-center justify-center text-[#8b949e]">No entries found.</div>';
                 return;
             }
-
             ui.logList.innerHTML = entries.map(entry => {
-                const badge = getSeverityBadge(entry.level);
-                const hasStack = entry.stack && entry.stack.trim().length > 0;
-                const msg = entry.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                const stack = hasStack ? entry.stack.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+                const lower = (entry.level || 'info').toLowerCase();
+                const badge = lower.includes('err') || lower.includes('fail') ? 'error' : (lower.includes('warn') ? 'warning' : 'info');
                 
                 return \`
-                <div class="log-entry \${badge === 'error' ? 'error-entry' : ''}" data-level="\${badge}" onclick="toggleStack(this)">
+                <div class="log-entry" onclick="this.classList.toggle('expanded')">
                     <div class="log-entry-row">
-                        <div class="col-sev">
-                            \${getSeverityIcon(badge)}
-                            <span class="badge \${badge}">\${entry.level}</span>
-                        </div>
+                        <div class="col-sev py-1"><span class="badge \${badge}">\${entry.level}</span></div>
                         <div class="col-date">\${entry.datetime}</div>
-                        <div class="col-env">\${entry.env}</div>
-                        <div class="col-msg">\${msg}</div>
+                        <div class="col-env text-xs opacity-50">\${entry.env}</div>
+                        <div class="col-msg">\${entry.message}</div>
                     </div>
                     <div class="log-detail">
-                        <div class="log-detail-label">Full Message</div>
-                        <div class="log-detail-message">\${msg}</div>
-                        \${hasStack ? \`<div class="log-detail-stack"><div class="log-detail-label" style="color:#f85149">Stack Trace</div>\${stack}</div>\` : ''}
+                        <div class="log-detail-message">\${entry.message}\\n\${entry.stack || ''}</div>
                     </div>
-                </div>\`
+                </div>\`;
             }).join('');
         }
 
-        ui.btnPrev.addEventListener('click', () => { if (currentPage > 1) loadFile(currentFile, currentPage - 1); });
-        ui.btnNext.addEventListener('click', () => { if (currentPage < totalPages) loadFile(currentFile, currentPage + 1); });
-
+        ui.btnPrev.onclick = () => loadFile(currentFile, currentPage - 1);
+        ui.btnNext.onclick = () => loadFile(currentFile, currentPage + 1);
         init();
     </script>
 </body>
@@ -294,10 +289,10 @@ class LogViewerController {
                         name: f,
                         mtime: stats.mtimeMs,
                         size: stats.size,
-                        sizeStr: (stats.size / (1024 * 1024)).toFixed(2) + ' MB'
+                        sizeStr: (stats.size / 1024).toFixed(1) + ' KB'
                     };
                 })
-                .sort((a, b) => b.mtime - a.mtime); // Newest first
+                .sort((a, b) => b.mtime - a.mtime);
         }
 
         const requestedFile = req.input('file');
@@ -309,8 +304,9 @@ class LogViewerController {
         const page = parseInt(req.input('page')) || 1;
         const perPage = 25;
         const levelFilter = req.input('level') || null;
+        const search = req.input('search') || null;
 
-        const parseResult = this.parseLogFileChunked(filePath, page, perPage, levelFilter);
+        const parseResult = this.parseLogFileChunked(filePath, page, perPage, levelFilter, search);
 
         return res.json({
             files,
@@ -320,107 +316,86 @@ class LogViewerController {
         });
     }
 
-    parseLogFileChunked(filePath, page, perPage, levelFilter = null) {
+    async deleteFile(req, res) {
+        const fileName = req.input('file');
+        if (!fileName) return res.status(400).send('File required');
+        
+        const filePath = path.join(base_path('storage/logs'), fileName);
+        if (fs.existsSync(filePath) && filePath.endsWith('.log')) {
+            fs.unlinkSync(filePath);
+            return res.status(200).send('Deleted');
+        }
+        return res.status(404).send('Not found');
+    }
+
+    async clearFile(req, res) {
+        const fileName = req.input('file');
+        if (!fileName) return res.status(400).send('File required');
+        
+        const filePath = path.join(base_path('storage/logs'), fileName);
+        if (fs.existsSync(filePath) && filePath.endsWith('.log')) {
+            fs.writeFileSync(filePath, '');
+            return res.status(200).send('Cleared');
+        }
+        return res.status(404).send('Not found');
+    }
+
+    parseLogFileChunked(filePath, page, perPage, levelFilter = null, search = null) {
         const stats = fs.statSync(filePath);
         if (stats.size === 0) return { entries: [], totalEntries: 0 };
 
         const fd = fs.openSync(filePath, 'r');
-        const chunkSize = 64 * 1024; // 64KB chunks
+        const chunkSize = 128 * 1024;
         const buffer = Buffer.alloc(chunkSize);
 
         let position = stats.size;
         let leftover = '';
         let entries = [];
-        let totalParsed = 0;
-
-        const startIndex = (page - 1) * perPage;
-
-        const logPattern = /^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+):([\s\S]*)/;
-
-        // Helper to classify level into badge category (same logic as frontend)
-        function classifyLevel(level) {
-            const lower = (level || 'info').toLowerCase();
-            if (lower.includes('err') || lower.includes('fail') || lower.includes('crit')) return 'error';
-            if (lower.includes('warn')) return 'warning';
-            if (lower.includes('debug')) return 'debug';
-            return 'info';
-        }
+        let totalMatched = 0;
+        const skip = (page - 1) * perPage;
 
         try {
             while (position > 0) {
                 const readSize = Math.min(position, chunkSize);
                 position -= readSize;
-
                 fs.readSync(fd, buffer, 0, readSize, position);
-                const chunkString = buffer.toString('utf8', 0, readSize);
-
-                const combined = chunkString + leftover;
-                const parts = combined.split('\n[');
-
+                
+                const chunkString = buffer.toString('utf8', 0, readSize) + leftover;
+                const parts = chunkString.split('\n[');
                 leftover = parts.shift();
-                if (position === 0) {
-                    parts.unshift(leftover);
-                    leftover = '';
-                }
+                if (position === 0) parts.unshift(leftover);
 
                 for (let i = parts.length - 1; i >= 0; i--) {
                     let block = parts[i];
-                    if (position > 0 || i > 0 || (position === 0 && block.startsWith('['))) {
-                        if (!block.startsWith('[')) block = '[' + block;
+                    if (!block.startsWith('[')) block = '[' + block;
+                    
+                    const match = block.match(/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+):([\s\S]*)/);
+                    if (match) {
+                        const level = match[3].toLowerCase();
+                        const message = match[4].trim();
+                        
+                        // Apply filters
+                        if (levelFilter && levelFilter !== 'all' && !level.includes(levelFilter)) continue;
+                        if (search && !message.toLowerCase().includes(search.toLowerCase())) continue;
 
-                        const match = block.match(logPattern);
-                        if (match) {
-                            const level = match[3];
-                            const badge = classifyLevel(level);
-
-                            // Skip if level filter is active and doesn't match
-                            if (levelFilter && badge !== levelFilter) continue;
-
-                            totalParsed++;
-
-                            if (totalParsed > startIndex && entries.length < perPage) {
-                                const newlinePos = match[4].indexOf('\n');
-                                let message = match[4];
-                                let stack = '';
-
-                                if (newlinePos !== -1) {
-                                    message = match[4].substring(0, newlinePos);
-                                    stack = match[4].substring(newlinePos + 1);
-                                }
-
-                                entries.push({
-                                    datetime: match[1],
-                                    env: match[2],
-                                    level: level,
-                                    message: message.trim(),
-                                    stack: stack.trim()
-                                });
-                            }
+                        totalMatched++;
+                        if (totalMatched > skip && entries.length < perPage) {
+                            const lines = message.split('\\n');
+                            entries.push({
+                                datetime: match[1],
+                                env: match[2],
+                                level: match[3],
+                                message: lines[0],
+                                stack: lines.slice(1).join('\\n')
+                            });
                         }
                     }
                 }
-
-                // Early exit: if we've filled the page and read enough to estimate
-                if (entries.length >= perPage && !levelFilter) break;
+                if (entries.length >= perPage && !search && !levelFilter) break;
             }
-        } finally {
-            fs.closeSync(fd);
-        }
+        } finally { fs.closeSync(fd); }
 
-        // For filtered results or full scan, totalParsed is exact
-        // For unfiltered partial reads, estimate total
-        let estimatedTotal = totalParsed;
-        if (!levelFilter && position > 0) {
-            const bytesRead = stats.size - position;
-            if (bytesRead > 0 && totalParsed > 0) {
-                estimatedTotal = Math.max(totalParsed, Math.floor((totalParsed / bytesRead) * stats.size));
-            }
-        }
-
-        return {
-            entries: entries,
-            totalEntries: estimatedTotal
-        };
+        return { entries, totalEntries: totalMatched };
     }
 }
 

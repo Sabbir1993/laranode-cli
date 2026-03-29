@@ -79,14 +79,16 @@ class S3Driver {
         
         // Resolve visibility
         const visibility = typeof options === 'string' ? options : (options.visibility || this.VISIBILITY_PRIVATE);
-        const acl = this._parseVisibility(visibility);
-
+        
         const uploadParams = {
             Bucket: this.bucket,
             Key: key,
             Body: contents,
-            ACL: acl
         };
+
+        if (visibility !== null) {
+            uploadParams.ACL = this._parseVisibility(visibility);
+        }
 
         if (options.contentType) {
             uploadParams.ContentType = options.contentType;
@@ -94,14 +96,28 @@ class S3Driver {
             uploadParams.ContentType = await this.mimeType(key);
         }
 
-        // Use @aws-sdk/lib-storage for seamless multipart uploads for buffers/streams
-        const parallelUploads3 = new Upload({
-            client: this.client,
-            params: uploadParams,
-        });
+        try {
+            // Use @aws-sdk/lib-storage for seamless multipart uploads for buffers/streams
+            const parallelUploads3 = new Upload({
+                client: this.client,
+                params: uploadParams,
+            });
 
-        await parallelUploads3.done();
-        return true;
+            await parallelUploads3.done();
+            return true;
+        } catch (e) {
+            // If the bucket doesn't support ACLs, retry without it
+            if ((e.name === 'AccessControlListNotSupported' || e.code === 'AccessControlListNotSupported') && uploadParams.ACL) {
+                delete uploadParams.ACL;
+                const retryUpload = new Upload({
+                    client: this.client,
+                    params: uploadParams,
+                });
+                await retryUpload.done();
+                return true;
+            }
+            throw e;
+        }
     }
 
     /**

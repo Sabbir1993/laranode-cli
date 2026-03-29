@@ -599,8 +599,14 @@ class Model {
         const instance = new this(attributes);
         return new Proxy(instance, {
             get(target, prop) {
+                // Priority 1: Check if relationship is already loaded
+                if (target.relations && target.relations[prop] !== undefined) {
+                    return target.relations[prop];
+                }
+
                 if (prop in target) {
-                    return target[prop];
+                    const value = target[prop];
+                    return typeof value === 'function' ? value.bind(target) : value;
                 }
                 return target.getAttribute(prop);
             },

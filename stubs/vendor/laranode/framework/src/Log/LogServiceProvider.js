@@ -22,7 +22,14 @@ class LogServiceProvider extends ServiceProvider {
      */
     boot() {
         const config = this.app.make('config');
-        if (config.get('logging.allow_log_viewer', false)) {
+        let allow = config.get('logging.allow_log_viewer', false);
+
+        // Robust check for boolean values from ENV strings
+        if (allow === 'false' || allow === '0' || allow === 'no' || allow === null) {
+            allow = false;
+        }
+
+        if (allow) {
             const endpoint = config.get('logging.log_viewer.endpoint', '/logs');
             const middleware = config.get('logging.log_viewer.middleware', []);
 
@@ -35,6 +42,8 @@ class LogServiceProvider extends ServiceProvider {
                 const controller = new LogViewerController();
                 Route.get(endpoint, (req, res) => controller.index(req, res));
                 Route.get(`${endpoint}/api`, (req, res) => controller.api(req, res));
+                Route.delete(`${endpoint}/api`, (req, res) => controller.deleteFile(req, res));
+                Route.post(`${endpoint}/api/clear`, (req, res) => controller.clearFile(req, res));
             });
         }
     }
