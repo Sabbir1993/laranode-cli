@@ -1,5 +1,3 @@
-const EncDec = use('App/Services/EncDecService');
-
 module.exports = {
     /*
     |--------------------------------------------------------------------------
@@ -40,10 +38,10 @@ module.exports = {
 
         s3: {
             driver: 's3',
-            key: EncDec.__decrypt(env('AWS_ACCESS_KEY_ID')),
-            secret: EncDec.__decrypt(env('AWS_SECRET_ACCESS_KEY')),
-            region: EncDec.__decrypt(env('AWS_DEFAULT_REGION')),
-            bucket: EncDec.__decrypt(env('AWS_BUCKET')),
+            key: env('AWS_ACCESS_KEY_ID'),
+            secret: env('AWS_SECRET_ACCESS_KEY'),
+            region: env('AWS_DEFAULT_REGION'),
+            bucket: env('AWS_BUCKET'),
             url: env('IMG_PATH'),
         },
     },

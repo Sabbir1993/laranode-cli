@@ -235,6 +235,22 @@ class Kernel {
             if (typeof action === 'function') {
                 const result = await action(req, res);
                 this.handleResult(result, res, expressRes);
+            } else if (Array.isArray(action)) {
+                // E.g [UserController, 'index']
+                const [ControllerClass, method] = action;
+                const controller = this.app.make(ControllerClass);
+
+                let actionReq = req;
+
+                // Auto-resolve FormRequest if specified in controller mapping
+                if (ControllerClass.requests && ControllerClass.requests[method]) {
+                    const RequestClass = ControllerClass.requests[method];
+                    actionReq = new RequestClass(expressReq);
+                    await actionReq.validateResolved();
+                }
+
+                const result = await controller[method](actionReq, res);
+                this.handleResult(result, res, expressRes);
             } else if (typeof action === 'string') {
                 // E.g 'UserController@index'
                 const [controllerName, method] = action.split('@');

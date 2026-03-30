@@ -211,6 +211,74 @@ module.exports = HomeController;
 ---
 
 <details>
+<summary><strong>🧩 Service Container & Dependency Injection</strong></summary>
+<br>
+
+LaraNode features a powerful Service Container (IoC container) that manages class dependencies and performs dependency injection.
+
+#### Dependency Injection (Constructor Injection)
+When resolving a class from the container (e.g., via a Controller or `this.app.make()`), the framework automatically injects the **Application instance** (the container) into the constructor.
+
+```javascript
+// app/Http/Controllers/UserController.js
+class UserController extends Controller {
+    constructor(app) {
+        super();
+        this.userRepo = app.make('App/Repositories/UserRepository');
+    }
+
+    async index(req, res) {
+        const users = await this.userRepo.all();
+        return res.json(users);
+    }
+}
+```
+
+#### Binding in AppServiceProvider
+You should register your service bindings in `app/Providers/AppServiceProvider.js`:
+
+```javascript
+// app/Providers/AppServiceProvider.js
+class AppServiceProvider extends ServiceProvider {
+    register() {
+        // Simple binding
+        this.app.bind('App/Repositories/UserRepository', require('../Repositories/UserRepository'));
+
+        // Singleton binding
+        this.app.singleton('payment.gateway', (app) => {
+            return new PaymentGateway(app.make('config').get('services.payment_key'));
+        });
+    }
+}
+```
+
+#### Sample Repository Pattern Example
+
+**1. Create the Repository:**
+```javascript
+// app/Repositories/UserRepository.js
+class UserRepository {
+    constructor(app) {
+        this.db = app.make('db'); // Resolve DB facade from container
+    }
+
+    async all() {
+        return this.db.table('users').get();
+    }
+}
+module.exports = UserRepository;
+```
+
+**2. Bind and Use:**
+Once bound in your Service Provider, the repository is easily accessible throughout your application via DI or the `this.app.make()` helper.
+
+---
+
+</details>
+
+---
+
+<details>
 <summary><strong>🗄️ Loquent ORM</strong></summary>
 <br>
 
@@ -1718,7 +1786,9 @@ The scaffolded project includes a complete sample application:
 Route.get('/login', 'AuthController@showLoginForm');
 Route.post('/login', 'AuthController@login');
 Route.get('/register', 'AuthController@showRegisterForm');
-Route.post('/register', 'AuthController@register');
+
+const AuthController = use('App/Http/Controllers/AuthController');
+Route.post('/register', [AuthController, 'register']);
 
 // Protected CRUD routes
 Route.group({ middleware: ['auth:api'] }, () => {
