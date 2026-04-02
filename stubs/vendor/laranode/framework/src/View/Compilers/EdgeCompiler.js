@@ -99,23 +99,43 @@ class EdgeCompiler {
         result = result.replace(/{{\s*(.+?)\s*}}/g, '${escapeHtml($1)}');
 
         // Forelse loops
-        result = result.replace(/@forelse\s*\((.+)\s+as\s+(.+)\)/g, '`; if ($1 && $1.length > 0) { for (const $2 of $1) { out += `');
+        result = result.replace(/@forelse\s*\((.+)\s+as\s+(.+)\)/g, (_, col, item) => {
+            this._assertSafeExpression(col, '@forelse');
+            return '`; if (' + col + ' && ' + col + '.length > 0) { for (const ' + item + ' of ' + col + ') { out += `';
+        });
         result = result.replace(/@empty/g, '`; } } else { out += `');
         result = result.replace(/@endforelse/g, '`; } out += `');
 
         // Basic Loops (Supports Array and Objects via Object.values)
-        result = result.replace(/@each\s*\((.+)\s+in\s+(.+)\)/g, '`; { let $loop = { index: 0 }; for (const $1 of (Array.isArray($2) ? $2 : (typeof $2 === "object" && $2 !== null ? Object.values($2) : []))) { out += `');
+        result = result.replace(/@each\s*\((.+)\s+in\s+(.+)\)/g, (_, item, col) => {
+            this._assertSafeExpression(col, '@each');
+            return '`; { let $loop = { index: 0 }; for (const ' + item + ' of (Array.isArray(' + col + ') ? ' + col + ' : (typeof ' + col + ' === "object" && ' + col + ' !== null ? Object.values(' + col + ') : []))) { out += `';
+        });
         result = result.replace(/@endeach/g, '`; $loop.index++; } } out += `');
 
-        result = result.replace(/@foreach\s*\((.+)\s+as\s+(.+)\)/g, '`; for (const $2 of ($1 || [])) { out += `');
+        result = result.replace(/@foreach\s*\((.+)\s+as\s+(.+)\)/g, (_, col, item) => {
+            this._assertSafeExpression(col, '@foreach');
+            return '`; for (const ' + item + ' of (' + col + ' || [])) { out += `';
+        });
         result = result.replace(/@endforeach/g, '`; } out += `');
 
-        result = result.replace(/@for\s*\((.+)\)/g, '`; for ($1) { out += `');
+        result = result.replace(/@for\s*\((.+)\)/g, (_, expr) => {
+            // @for allows semicolons (for init; cond; step) — only block function declarations
+            if (/\bfunction\b/.test(expr))
+                throw new Error(`[EdgeCompiler] Unsafe expression in @for: ${expr.slice(0, 60)}`);
+            return '`; for (' + expr + ') { out += `';
+        });
         result = result.replace(/@endfor/g, '`; } out += `');
 
         // 5. Control Structures
-        result = result.replace(/@if\s*\((.+)\)/g, '`; if ($1) { out += `');
-        result = result.replace(/@elseif\s*\((.+)\)/g, '`; } else if ($1) { out += `');
+        result = result.replace(/@if\s*\((.+)\)/g, (_, expr) => {
+            this._assertSafeExpression(expr, '@if');
+            return '`; if (' + expr + ') { out += `';
+        });
+        result = result.replace(/@elseif\s*\((.+)\)/g, (_, expr) => {
+            this._assertSafeExpression(expr, '@elseif');
+            return '`; } else if (' + expr + ') { out += `';
+        });
         result = result.replace(/@else/g, '`; } else { out += `');
         result = result.replace(/@endif/g, '`; } out += `');
 
@@ -186,21 +206,132 @@ class EdgeCompiler {
                 // Block dangerous Node.js globals from template expressions
                 const DANGEROUS = new Set([
                     'require','__dirname','__filename','module','exports',
-                    'process','Buffer','eval','Function','global','globalThis','GLOBAL'
+                    'process','Buffer','eval','Function','global','globalThis','GLOBAL',
+                    'constructor', 'prototype', '__proto__'
                 ]);
+
+                // Fix B: Wrap every callable so .constructor/.prototype are unreachable.
+                // Recursive so child functions returned from calls are also wrapped.
+                const CALL_BLOCKED = new Set(['constructor','__proto__','prototype','caller','arguments']);
+                function mkSafe(target) {
+                    if (typeof target !== 'function' && (typeof target !== 'object' || target === null)) return target;
+                    return new Proxy(target, {
+                        get(t, prop) {
+                            // Fix: Proxy invariant requires us to return actual value for non-configurable props
+                            const desc = Object.getOwnPropertyDescriptor(t, prop);
+                            if (desc && !desc.configurable && !desc.writable) {
+                                return Reflect.get(t, prop);
+                            }
+
+                            if (typeof prop === 'string' && CALL_BLOCKED.has(prop)) return undefined;
+                            let v = Reflect.get(t, prop);
+
+                            // If v is a function (and not a constructor), bind it to the original target
+                            // so built-ins with internal slots (Date, RegExp, Promise) still work.
+                            if (typeof v === 'function' && !/^[A-Z]/.test(v.name || '')) {
+                                v = v.bind(t);
+                            }
+                            return mkSafe(v); // Recursive protection
+                        },
+                        getPrototypeOf() { return null; },
+                        construct(t, args) {
+                            const result = Reflect.construct(t, args);
+                            return mkSafe(result);
+                        },
+                        apply(t, thisArg, args) {
+                            const result = Reflect.apply(t, thisArg, args);
+                            return mkSafe(result);
+                        },
+                    });
+                }
+                function mkSafeConstructor(ctor) {
+                    if (typeof ctor !== 'function') return mkSafe(ctor);
+                    return new Proxy(ctor, {
+                        get(t, prop) {
+                            const desc = Object.getOwnPropertyDescriptor(t, prop);
+                            if (desc && !desc.configurable && !desc.writable) {
+                                return Reflect.get(t, prop);
+                            }
+
+                            if (typeof prop === 'string' && CALL_BLOCKED.has(prop)) return undefined;
+                            const v = Reflect.get(t, prop);
+                            return mkSafe(v);
+                        },
+                        getPrototypeOf() { return null; },
+                        construct(t, args) { return mkSafe(Reflect.construct(t, args)); },
+                    });
+                }
+
+                // Stripped-down safe replacements for common globals.
+                // All callables wrapped with mkSafe() so .constructor chains are blocked.
+                const SAFE_GLOBALS = Object.freeze({
+                    Math, JSON,
+                    parseInt:            mkSafe(parseInt),
+                    parseFloat:          mkSafe(parseFloat),
+                    isNaN, isFinite,
+                    encodeURIComponent:  mkSafe(encodeURIComponent),
+                    decodeURIComponent:  mkSafe(decodeURIComponent),
+                    String:              mkSafe((v) => String(v)),
+                    Number:              mkSafe((v) => Number(v)),
+                    Boolean:             mkSafe((v) => Boolean(v)),
+                    // Constructors — use mkSafeConstructor so new Date() / new RegExp() work
+                    Date:                mkSafeConstructor(Date),
+                    RegExp:              mkSafeConstructor(RegExp),
+                    Error:               mkSafeConstructor(Error),
+                    Array: Object.freeze({
+                        isArray: mkSafe(Array.isArray),
+                        from:    mkSafe(Array.from.bind(Array)),
+                        of:      mkSafe(Array.of.bind(Array)),
+                    }),
+                    Object: Object.freeze({
+                        keys:    mkSafe(Object.keys.bind(Object)),
+                        values:  mkSafe(Object.values.bind(Object)),
+                        entries: mkSafe(Object.entries.bind(Object)),
+                        assign:  mkSafe(Object.assign.bind(Object)),
+                        freeze:  mkSafe(Object.freeze.bind(Object)),
+                        create:  mkSafe(Object.create.bind(Object)),
+                        hasOwn:  mkSafe((o, k) => Object.prototype.hasOwnProperty.call(o, k)),
+                    }),
+                    // Framework-registered helpers — wrapped to block .constructor chain
+                    route:               mkSafe(global.route),
+                    url:                 mkSafe(global.url),
+                    asset:               mkSafe(global.asset),
+                    config:              mkSafe(global.config),
+                    env:                 mkSafe(global.env),
+                    use:                 mkSafe(global.use),
+                    uses:                mkSafe(global.uses),
+                    collect:             mkSafe(global.collect),
+                    base_path:           mkSafe(global.base_path),
+                    app_path:            mkSafe(global.app_path),
+                    resource_path:       mkSafe(global.resource_path),
+                    storage_path:        mkSafe(global.storage_path),
+                    public_path:         mkSafe(global.public_path),
+                    dump:                mkSafe(global.dump),
+                    dd:                  mkSafe(global.dd),
+                    e:                   mkSafe(global.e),
+                    encrypt:             mkSafe(global.encrypt),
+                    decrypt:             mkSafe(global.decrypt),
+                    request:             mkSafe(global.request),
+                    response:            mkSafe(global.response),
+                });
 
                 const safeData = new Proxy(data, {
                     has(target, key) {
                         if (typeof key === 'symbol') return false;
                         if (DANGEROUS.has(key)) return true; // route through get → undefined
-                        if (['escapeHtml','__raw','safeData','data','out','DANGEROUS'].includes(key)) return false;
+                        // Internal compile-scope names: resolve as real locals, not via proxy
+                        if (['escapeHtml','__raw','safeData','data','out','DANGEROUS','SAFE_GLOBALS','CALL_BLOCKED','mkSafe','mkSafeConstructor'].includes(key)) return false;
                         if (Object.prototype.hasOwnProperty.call(target, key)) return true;
-                        if (key in global) return false;
+                        if (key in SAFE_GLOBALS) return true; // intercept via get, not real global
+                        // Fix A: return true (not false) so ALL unknown names route through get()
                         return true;
                     },
                     get(target, key) {
                         if (DANGEROUS.has(key)) return undefined;
-                        return target[key];
+                        if (Object.prototype.hasOwnProperty.call(target, key)) return target[key];
+                        // SAFE_GLOBALS check comes before falling through to undefined
+                        if (key in SAFE_GLOBALS) return SAFE_GLOBALS[key];
+                        return undefined; // unknown identifier → undefined, not a real global
                     }
                 });
 
@@ -236,6 +367,8 @@ class EdgeCompiler {
         const m = scriptTag.match(/^(<script(\s[^>]*)?>)([\s\S]*)(<\/script>)$/i);
         if (!m) return scriptTag;
         let inner = m[3];
+        // NEW: Escape backticks and interpolation start because this will be inside a `...` literal
+        inner = inner.replace(/`/g, '\\`').replace(/\${/g, '\\${');
         inner = inner.replace(/{{--([\s\S]+?)--}}/g, '');
         inner = inner.replace(/{!!\s*(.+?)\s*!!}/g, '${__raw($1)}');
         inner = inner.replace(/{{\s*(.+?)\s*}}/g, '${escapeHtml($1)}');
@@ -250,21 +383,41 @@ class EdgeCompiler {
         return result;
     }
 
+    // ── Fix 2: Directive expression guard ────────────────────────────────────────
+
+    /**
+     * Throw if a directive expression contains structural injection patterns.
+     * Blocks: { } ; function keyword — the exact payload form in the audit report.
+     */
+    _assertSafeExpression(expr, directive) {
+        if (/[;{}]/.test(expr))
+            throw new Error(`[EdgeCompiler] Illegal characters in ${directive} expression: ${expr.slice(0, 60)}`);
+        if (/\bfunction\b/.test(expr))
+            throw new Error(`[EdgeCompiler] function keyword not allowed in ${directive} expression: ${expr.slice(0, 60)}`);
+        if (/\b(require|eval|import|constructor|prototype|__proto__)\b/.test(expr))
+            throw new Error(`[EdgeCompiler] Unsafe identifier in ${directive} expression: ${expr.slice(0, 60)}`);
+    }
+
     // ── Fix 4: @include extraData validation ─────────────────────────────────────
 
-    /** Validate that an @include extra-data argument is a safe object literal (no code injection). */
+    /**
+     * Validate that an @include extra-data argument is a safe object literal.
+     * Uses vm.Script test-compile to catch syntax errors, plus keyword blocklist.
+     */
     _isValidObjectLiteral(str) {
+        const vm = require('vm');
         const t = str.trim();
         if (!t.startsWith('{') || !t.endsWith('}')) return false;
         if (t.includes(';')) return false;
-        if (/\b(require|eval|Function|process|import)\b/.test(t)) return false;
-        let depth = 0;
-        for (const ch of t) {
-            if (ch === '{') depth++;
-            if (ch === '}') depth--;
-            if (depth < 0) return false;
+        // Block prototype access, constructors, and known dangerous identifiers
+        if (/\b(require|eval|Function|process|import|constructor|prototype|__proto__)\b/.test(t)) return false;
+        // Test-compile: catches syntax errors and template-literal injection
+        try {
+            new vm.Script('(' + t + ')');
+        } catch {
+            return false;
         }
-        return depth === 0;
+        return true;
     }
 }
 
