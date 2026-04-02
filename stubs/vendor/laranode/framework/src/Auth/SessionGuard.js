@@ -5,6 +5,18 @@ class SessionGuard {
         this.name = name;
         this.provider = provider;
         this.userObj = null;
+        this.loggedOut = false;
+    }
+
+    /**
+     * Get the session key used for authentication state.
+     * Fixed to be stable across restarts.
+     *
+     * @return {string}
+     */
+    getName() {
+        const crypto = require('crypto');
+        return 'login_' + this.name + '_' + crypto.createHash('md5').update(this.name + '_guard').digest('hex');
     }
 
     /**
@@ -34,26 +46,39 @@ class SessionGuard {
      */
     async login(user, remember = false) {
         this.userObj = user;
+        this.loggedOut = false;
 
         const req = request();
-        const res = response();
+        if (!req) return;
 
-        if (!req || !res) return;
+        let session = req.session;
 
-        // 1. Set Session
-        if (req.req.session) {
-            req.req.session.user_id = user.id;
+        // 1. Regenerate session ID to prevent fixation (like Laravel)
+        const expressReq = req.getExpressRequest();
+        if (expressReq && expressReq.session && typeof expressReq.session.regenerate === 'function') {
+            await new Promise((resolve) => expressReq.session.regenerate(() => resolve()));
+            // After regeneration, we MUST re-fetch the session from the request because it's a new object
+            session = req.session; 
         }
 
-        // 2. Generate and Set Token Cookie (Sanctum style for LaraNode)
-        if (typeof user.createToken === 'function') {
-            const tokenResult = await user.createToken('auth_token');
-            const responseObj = res.res || res; // Handle wrapper proxy
+        // 2. Persist user ID to session using the framework's Request.session proxy
+        session.put(this.getName(), user.id);
 
-            responseObj.cookie('token', tokenResult.plainTextToken, {
-                httpOnly: true,
-                maxAge: remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 30 days or 1 day
-            });
+        // 3. Force save the underlying Express session if the store doesn't do it automatically
+        if (expressReq && expressReq.session && typeof expressReq.session.save === 'function') {
+            await new Promise((resolve) => expressReq.session.save(() => resolve()));
+        }
+
+        // 4. Handle "Remember Me" if requested
+        if (remember) {
+            const res = response();
+            const expressRes = res && res.res; // Get underlying Express response
+            if (expressRes && typeof expressRes.cookie === 'function') {
+                expressRes.cookie('remember_token', 'remember_' + this.name + '_' + user.id, {
+                    httpOnly: true,
+                    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                });
+            }
         }
     }
 
@@ -63,71 +88,77 @@ class SessionGuard {
      * @return {Promise<void>}
      */
     async logout() {
-        const req = request();
-        const res = response();
-        const user = this.user();
-
-        if (user && typeof user.currentAccessToken === 'function' && user.currentAccessToken()) {
-            await user.currentAccessToken().delete();
-        }
-
         this.userObj = null;
+        this.loggedOut = true;
 
-        if (req && req.req.session) {
-            req.req.session.user_id = null;
+        const req = request();
+        if (!req) return;
+
+        const session = req.session;
+        session.forget(this.getName());
+
+        const expressReq = req.getExpressRequest();
+        if (expressReq && expressReq.session && typeof expressReq.session.destroy === 'function') {
+            await new Promise((resolve) => expressReq.session.destroy(() => resolve()));
         }
 
-        if (res) {
-            const responseObj = res.res || res;
-            responseObj.clearCookie('token');
+        const res = response();
+        const expressRes = res && res.res;
+        if (expressRes && typeof expressRes.clearCookie === 'function') {
+            expressRes.clearCookie('remember_token');
         }
-    }
-
-    /**
-     * Determine if the current user is authenticated.
-     *
-     * @return {boolean}
-     */
-    check() {
-        return this.user() !== null;
-    }
-
-    /**
-     * Determine if the current user is a guest.
-     *
-     * @return {boolean}
-     */
-    guest() {
-        return !this.check();
     }
 
     /**
      * Get the currently authenticated user.
      *
-     * @return {Object|null}
+     * @return {Promise<Object|null>}
      */
-    user() {
-        if (this.userObj) {
-            return this.userObj;
-        }
+    async user() {
+        if (this.loggedOut) return null;
 
-        // If not set in memory, it will be set by the Authenticate middleware 
-        // which runs before the controller.
+        // 1. Return cached user for this instance (request lifecycle)
+        if (this.userObj) return this.userObj;
+
+        // 2. Try to load from session
         const req = request();
-        if (req && typeof req.user === 'function') {
-            this.userObj = req.user();
+        if (!req) return null;
+
+        const session = req.session;
+        const id = session.get(this.getName());
+
+        if (id) {
+            this.userObj = await this.provider.find(id);
         }
 
         return this.userObj;
     }
 
     /**
+     * Determine if the current user is authenticated.
+     *
+     * @return {Promise<boolean>}
+     */
+    async check() {
+        return (await this.user()) !== null;
+    }
+
+    /**
+     * Determine if the current user is a guest.
+     *
+     * @return {Promise<boolean>}
+     */
+    async guest() {
+        return !(await this.check());
+    }
+
+    /**
      * Get the ID for the currently authenticated user.
      *
-     * @return {number|string|null}
+     * @return {Promise<number|string|null>}
      */
-    id() {
-        const user = this.user();
+    async id() {
+        const user = await this.user();
         return user ? user.id : null;
     }
 
@@ -139,6 +170,7 @@ class SessionGuard {
      */
     setUser(user) {
         this.userObj = user;
+        this.loggedOut = false;
         return this;
     }
 }

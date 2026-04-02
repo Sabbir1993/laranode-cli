@@ -52,6 +52,15 @@ class Kernel {
         this.expressApp.use(express.static(process.cwd() + '/public'));
         this.expressApp.use(express.json());
         this.expressApp.use(express.urlencoded({ extended: true }));
+        // Method override: allows HTML forms to submit PUT/PATCH/DELETE via _method body field
+        const methodOverride = require('method-override');
+        this.expressApp.use(methodOverride((req) => {
+            if (req.body && req.body._method) {
+                const method = req.body._method;
+                delete req.body._method;
+                return method;
+            }
+        }));
         this.expressApp.use(fileUpload({
             createParentPath: true, // Automatically creates directories if they don't exist
             limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max limit
@@ -249,7 +258,8 @@ class Kernel {
                     await actionReq.validateResolved();
                 }
 
-                const result = await controller[method](actionReq, res);
+                const routeParams = Object.values(expressReq.params || {});
+                const result = await controller[method](...routeParams, actionReq, res);
                 this.handleResult(result, res, expressRes);
             } else if (typeof action === 'string') {
                 // E.g 'UserController@index'
@@ -267,7 +277,9 @@ class Kernel {
                     await actionReq.validateResolved();
                 }
 
-                const result = await controller[method](actionReq, res);
+                // Inject route params as leading args: edit(id, req, res), show(ref, req, res), etc.
+                const routeParams = Object.values(expressReq.params || {});
+                const result = await controller[method](...routeParams, actionReq, res);
                 this.handleResult(result, res, expressRes);
             }
         } catch (err) {
@@ -315,9 +327,13 @@ class Kernel {
      */
     handleResult(result, res, expressRes) {
         if (result !== undefined && !expressRes.headersSent) {
-            // Check if it's a JsonResource or ResourceCollection
-            // Note: Since JsonResource uses a Proxy, typeof result === 'object' is true
-            // but we need to explicitly check for the resolve method
+            // Controller returned the Response wrapper (e.g. return res.status(500))
+            // Trigger raw() so the appropriate error page is rendered
+            if (result && result._isLaraResponse) {
+                if (!expressRes.headersSent) result.raw();
+                return;
+            }
+
             if (result && typeof result.resolve === 'function') {
                 const Request = use('laranode/Http/Request');
                 const req = new Request(expressRes.req); // mock request for now

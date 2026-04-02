@@ -62,6 +62,19 @@ class DatabaseManager {
     }
 
     /**
+     * Execute a raw SQL statement (SET, CREATE, DROP, etc.) and return true on success.
+     * Mirrors Laravel's DB::statement().
+     *
+     * @param  {string}  sql
+     * @param  {Array}   bindings
+     * @return {Promise<boolean>}
+     */
+    async statement(sql, bindings = []) {
+        await this.connection().query(sql, bindings);
+        return true;
+    }
+
+    /**
      * Begin a fluent query against a database table.
      * @param {string} table 
      */

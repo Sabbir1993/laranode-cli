@@ -96,8 +96,8 @@ class EdgeCompiler {
         result = result.replace(/@endforelse/g, '`; } out += `');
 
         // Basic Loops (Supports Array and Objects via Object.values)
-        result = result.replace(/@each\s*\((.+)\s+in\s+(.+)\)/g, '`; for (const $1 of (Array.isArray($2) ? $2 : (typeof $2 === "object" && $2 !== null ? Object.values($2) : []))) { out += `');
-        result = result.replace(/@endeach/g, '`; } out += `');
+        result = result.replace(/@each\s*\((.+)\s+in\s+(.+)\)/g, '`; { let $loop = { index: 0 }; for (const $1 of (Array.isArray($2) ? $2 : (typeof $2 === "object" && $2 !== null ? Object.values($2) : []))) { out += `');
+        result = result.replace(/@endeach/g, '`; $loop.index++; } } out += `');
 
         result = result.replace(/@foreach\s*\((.+)\s+as\s+(.+)\)/g, '`; for (const $2 of ($1 || [])) { out += `');
         result = result.replace(/@endforeach/g, '`; } out += `');

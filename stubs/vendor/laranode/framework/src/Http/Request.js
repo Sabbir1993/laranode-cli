@@ -5,6 +5,38 @@ class Request {
      */
     constructor(req) {
         this.req = req;
+        // Properties that must use the Request wrapper's own getter/method,
+        // not the raw Express req value (circular refs or wrapped APIs)
+        const UNSAFE = new Set([
+            'socket', 'connection', 'client',
+            '_events', '_eventsCount', '_maxListeners', '_readableState',
+            'read', 'write', 'pipe', 'unpipe', 'destroy', 'resume', 'pause',
+            'emit', 'on', 'once', 'addListener', 'removeListener', 'removeAllListeners',
+            'session', // LaraNode wraps this with .get()/.put()/.forget() API
+        ]);
+        return new Proxy(this, {
+            get(target, prop, receiver) {
+                if (typeof prop === 'symbol') return Reflect.get(target, prop, receiver);
+                // 1. Own properties of this wrapper (e.g. this.req set in constructor)
+                if (Object.prototype.hasOwnProperty.call(target, prop)) {
+                    return Reflect.get(target, prop, receiver);
+                }
+                // 2. Middleware-set own properties on the raw Express req take priority
+                //    over prototype methods (user, organizerId, organizer, body, method…)
+                //    Blocked: native stream/socket props that carry circular references
+                if (!UNSAFE.has(prop) && Object.prototype.hasOwnProperty.call(target.req, prop)) {
+                    return target.req[prop];
+                }
+                // 3. Request class prototype methods (all, only, input, validate, etc.)
+                if (prop in target) return Reflect.get(target, prop, receiver);
+                return undefined;
+            },
+            set(target, prop, value) {
+                if (prop === 'req') { target.req = value; return true; }
+                target[prop] = value;
+                return true;
+            },
+        });
     }
 
     /**
@@ -75,8 +107,31 @@ class Request {
     }
 
     /**
+     * Get only the specified keys from the request input.
+     * @param {Array} keys
+     * @returns {Object}
+     */
+    only(keys) {
+        const all = this.all();
+        return keys.reduce((acc, k) => {
+            if (k in all) acc[k] = all[k];
+            return acc;
+        }, {});
+    }
+
+    /**
+     * Get all input except the specified keys.
+     * @param {Array} keys
+     * @returns {Object}
+     */
+    except(keys) {
+        const all = this.all();
+        return Object.fromEntries(Object.entries(all).filter(([k]) => !keys.includes(k)));
+    }
+
+    /**
      * Determine if the request contains a given input item key.
-     * @param {string} key 
+     * @param {string} key
      * @returns {boolean}
      */
     has(key) {
@@ -228,7 +283,9 @@ class Request {
      * @returns {Object|null}
      */
     user() {
-        return typeof this.req.user === 'function' ? this.req.user() : null;
+        // req.user is set as a property by AuthMiddleware (a model instance, not a function)
+        if (typeof this.req.user === 'function') return this.req.user();
+        return this.req.user || null;
     }
 
     /**

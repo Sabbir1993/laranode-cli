@@ -431,6 +431,11 @@ class Builder {
 
     with(...relations) {
         if (!this.eagerLoad) this.eagerLoad = [];
+        // Support .with('relation', constraintCallback) signature
+        if (relations.length === 2 && typeof relations[0] === 'string' && typeof relations[1] === 'function') {
+            this.eagerLoad.push({ name: relations[0], callback: relations[1] });
+            return this;
+        }
         this.eagerLoad.push(...relations);
         return this;
     }
@@ -439,13 +444,17 @@ class Builder {
         if (models.length === 0) return;
 
         for (const relation of this.eagerLoad) {
-            let name = relation;
-            let nested = null;
-            let columns = null;
+            // Support both plain string and { name, callback } object forms
+            let name     = typeof relation === 'object' && relation !== null ? relation.name : relation;
+            let callback = typeof relation === 'object' && relation !== null ? (relation.callback || null) : null;
+            let nested   = null;
+            let columns  = null;
+
+            if (typeof name !== 'string') continue; // skip malformed entries
 
             // Support 'relation.nested' syntax
-            if (typeof relation === 'string' && relation.includes('.')) {
-                const parts = relation.split('.');
+            if (name.includes('.')) {
+                const parts = name.split('.');
                 name = parts[0];
                 nested = parts.slice(1).join('.');
             }
@@ -468,6 +477,11 @@ class Builder {
                 // Apply column selection if specified
                 if (columns && specificBuilder && typeof specificBuilder.select === 'function') {
                     specificBuilder.select(...columns);
+                }
+
+                // Apply constraint callback e.g. .with('tickets', q => q.where('is_active', 1))
+                if (callback && specificBuilder) {
+                    callback(specificBuilder);
                 }
 
                 // Add nested relations to be loaded by the child query

@@ -5,6 +5,7 @@ class Response {
      */
     constructor(res) {
         this.res = res;
+        this._isLaraResponse = true; // sentinel for Kernel.handleResult
     }
 
     /**
@@ -13,6 +14,7 @@ class Response {
      * @returns {this}
      */
     status(code) {
+        this._statusCode = code;
         this.res.status(code);
         return this;
     }
@@ -56,6 +58,23 @@ class Response {
      */
     send(body) {
         return this.res.send(body);
+    }
+
+    raw(message = '') {
+        const code = this._statusCode;
+        if (code) {
+            const fs = require('fs');
+            const path = require('path');
+            const viewPath = path.join(__dirname, '../Foundation/resources/views/errors', code + '.edge');
+            if (fs.existsSync(viewPath)) {
+                let html = fs.readFileSync(viewPath, 'utf8');
+                // Inject message into {{message}} placeholder (Edge raw output or escaped)
+                html = html.replace(/\{\{-?\s*message\s*-?\}\}/g, message || '');
+                return this.res.send(html);
+            }
+        }
+        // No matching error view — send plain text (or nothing if message is empty)
+        return this.res.send(message);
     }
 
     /**
@@ -110,8 +129,9 @@ class Response {
             data.request = reqInstance;
             data.session = reqInstance.session;
 
-            // Inject auth state - Populated by ShareUser middleware or Authenticate middleware
-            const user = reqInstance.user();
+            // Inject auth state — read directly from underlying Express req
+            // (req.user is set as a model instance by AuthMiddleware, not a callable)
+            const user = this.res.req.user || null;
             data.auth = {
                 user: user,
                 check: !!user

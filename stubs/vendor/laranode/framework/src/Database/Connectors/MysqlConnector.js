@@ -54,7 +54,19 @@ class MysqlConnector {
             }
 
         } catch (error) {
-            throw new Error(`MySQL Error: ${error.message} \nQuery: ${sql} \nBindings: ${JSON.stringify(bindings)}`);
+            // Safe stringify — avoids crashing on circular refs (e.g. Socket in req bindings)
+            const safeStringify = (val) => {
+                const seen = new WeakSet();
+                return JSON.stringify(val, (k, v) => {
+                    if (typeof v === 'function') return '[Function]';
+                    if (typeof v === 'object' && v !== null) {
+                        if (seen.has(v)) return '[Circular]';
+                        seen.add(v);
+                    }
+                    return v;
+                });
+            };
+            throw new Error(`MySQL Error: ${error.message} \nQuery: ${sql} \nBindings: ${safeStringify(bindings)}`);
         }
     }
 
