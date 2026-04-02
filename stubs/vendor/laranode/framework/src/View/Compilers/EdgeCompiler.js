@@ -64,7 +64,12 @@ class EdgeCompiler {
             result = parentTemplate;
         }
 
-        // 0. Escape existing backticks and ${} in the source content
+        // Fix 1: Extract <script> blocks before compilation so directives and backtick-escaping
+        // don't fire inside browser JS code.
+        const { cleaned, slots } = this._extractScriptBlocks(result);
+        result = cleaned;
+
+        // 0. Escape existing backticks and ${} in the source content (HTML only — scripts already extracted)
         // We do this AFTER layout resolution to ensure parent content is also escaped.
         result = result.replace(/`/g, '\\`').replace(/\${/g, '\\${');
 
@@ -73,19 +78,22 @@ class EdgeCompiler {
 
         // 2. Includes @include('partial.name', { extra: 'data' })
         // Supports optional second argument for passing local variables
-        result = result.replace(/@include\s*\(['"](.+?)['"]\s*(?:,\s*(.+?))?\s*\)/g, (match, ipath, extraData) => {
-            // Use ipath to avoid confusion with the path module
-            const finalPath = path.isAbsolute(ipath) ? ipath : ipath;
-            // The global.view helper now handles absolute vs relative internally
-            return `\${global.view('${finalPath}', Object.assign({}, data, ${extraData || '{}'}))}`;
+        result = result.replace(/@include\s*\(['"](.+?)['"]\s*(?:,\s*([\s\S]+?))?\s*\)/g, (match, ipath, extraData) => {
+            let safeExtra = '{}';
+            if (extraData) {
+                if (!this._isValidObjectLiteral(extraData.trim()))
+                    throw new Error(`[EdgeCompiler] Unsafe @include extra data: ${extraData.trim().slice(0, 80)}`);
+                safeExtra = extraData.trim();
+            }
+            return `\${global.view('${ipath}', Object.assign({}, data, ${safeExtra}))}`;
         });
 
         // 2.1 CSRF Token @csrf
         // Generates a hidden input with the CSRF token
         result = result.replace(/@csrf/g, '<input type="hidden" name="_token" value="${data.csrfToken || \'\'}">');
 
-        // 3. Raw Echo {!! $var !!}
-        result = result.replace(/{!!\s*(.+?)\s*!!}/g, '${$1}');
+        // 3. Raw Echo {!! $var !!} — __raw() wrapper makes unescaped output visible in generated code
+        result = result.replace(/{!!\s*(.+?)\s*!!}/g, '${__raw($1)}');
 
         // 4. Escaped Echo {{ $var }} (Basic escape for now)
         result = result.replace(/{{\s*(.+?)\s*}}/g, '${escapeHtml($1)}');
@@ -116,6 +124,11 @@ class EdgeCompiler {
         result = result.replace(/@endauth/g, '`; } out += `');
         result = result.replace(/@guest/g, '`; if (!data.auth || !data.auth.user) { out += `');
         result = result.replace(/@endguest/g, '`; } out += `');
+
+        // Reintegrate <script> blocks with only {{ }} / {!! !!} interpolation applied
+        for (const token of Object.keys(slots))
+            slots[token] = this._compileScriptBlock(slots[token]);
+        result = this._reintegrateScriptBlocks(result, slots);
 
         // Wrap the whole thing in a function body that returns the built string
         const compiled = `
@@ -154,7 +167,6 @@ class EdgeCompiler {
         // We wrap the compiled code in a module.exports function taking data
         const jsWrapper = `
             module.exports = function(data) {
-                // Determine if a variable is defined, and default to empty string if not
                 function escapeHtml(unsafe) {
                     if (unsafe === null || unsafe === undefined) return '';
                     return String(unsafe)
@@ -164,23 +176,32 @@ class EdgeCompiler {
                          .replace(/"/g, "&quot;")
                          .replace(/'/g, "&#039;");
                 }
-                
-                // Expose data properties as local variables using a with() block MVP
-                // In production, we'd use a safer parser mapping, but this mimics Blade's flat data context
+
+                // RAW OUTPUT — no HTML escaping. Only pass pre-sanitized values. XSS risk if user data is passed here.
+                function __raw(value) {
+                    if (value === null || value === undefined) return '';
+                    return String(value);
+                }
+
+                // Block dangerous Node.js globals from template expressions
+                const DANGEROUS = new Set([
+                    'require','__dirname','__filename','module','exports',
+                    'process','Buffer','eval','Function','global','globalThis','GLOBAL'
+                ]);
+
                 const safeData = new Proxy(data, {
                     has(target, key) {
                         if (typeof key === 'symbol') return false;
-                        // Don't shadow internal functions/variables
-                        if (['escapeHtml', 'safeData', 'data', 'out'].includes(key)) return false;
-                        
-                        // If it's in the data, prioritize it even if it's a global
+                        if (DANGEROUS.has(key)) return true; // route through get → undefined
+                        if (['escapeHtml','__raw','safeData','data','out','DANGEROUS'].includes(key)) return false;
                         if (Object.prototype.hasOwnProperty.call(target, key)) return true;
-
-                        // Don't shadow global objects like String, Math, console
                         if (key in global) return false;
                         return true;
                     },
-                    get(target, key) { return target[key]; }
+                    get(target, key) {
+                        if (DANGEROUS.has(key)) return undefined;
+                        return target[key];
+                    }
                 });
 
                 return (function() {
@@ -194,6 +215,56 @@ class EdgeCompiler {
         fs.writeFileSync(compiledPath, jsWrapper);
 
         return compiledPath;
+    }
+
+    // ── Fix 1: Script-block awareness ────────────────────────────────────────────
+
+    /** Replace <script>…</script> blocks with tokens before HTML compilation. */
+    _extractScriptBlocks(template) {
+        const slots = {};
+        let idx = 0;
+        const cleaned = template.replace(/<script(\s[^>]*)?>[\s\S]*?<\/script>/gi, (match) => {
+            const token = `__SCRIPT_SLOT_${idx++}__`;
+            slots[token] = match;
+            return token;
+        });
+        return { cleaned, slots };
+    }
+
+    /** Apply only {{ }} and {!! !!} interpolation inside a <script> block — no backtick escaping, no @directives. */
+    _compileScriptBlock(scriptTag) {
+        const m = scriptTag.match(/^(<script(\s[^>]*)?>)([\s\S]*)(<\/script>)$/i);
+        if (!m) return scriptTag;
+        let inner = m[3];
+        inner = inner.replace(/{{--([\s\S]+?)--}}/g, '');
+        inner = inner.replace(/{!!\s*(.+?)\s*!!}/g, '${__raw($1)}');
+        inner = inner.replace(/{{\s*(.+?)\s*}}/g, '${escapeHtml($1)}');
+        return m[1] + inner + m[4];
+    }
+
+    /** Restore script tokens with their (now interpolation-processed) original content. */
+    _reintegrateScriptBlocks(template, slots) {
+        let result = template;
+        for (const [token, content] of Object.entries(slots))
+            result = result.replace(token, () => content);
+        return result;
+    }
+
+    // ── Fix 4: @include extraData validation ─────────────────────────────────────
+
+    /** Validate that an @include extra-data argument is a safe object literal (no code injection). */
+    _isValidObjectLiteral(str) {
+        const t = str.trim();
+        if (!t.startsWith('{') || !t.endsWith('}')) return false;
+        if (t.includes(';')) return false;
+        if (/\b(require|eval|Function|process|import)\b/.test(t)) return false;
+        let depth = 0;
+        for (const ch of t) {
+            if (ch === '{') depth++;
+            if (ch === '}') depth--;
+            if (depth < 0) return false;
+        }
+        return depth === 0;
     }
 }
 
