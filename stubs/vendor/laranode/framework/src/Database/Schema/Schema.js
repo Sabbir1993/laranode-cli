@@ -25,13 +25,22 @@ class Schema {
 
         callback(blueprint);
 
-        // This MVP doesn't support full ALTER TABLE correctly, this is a basic stub
         const driver = this.getDB().connection().config.driver;
         const statements = blueprint.columns.map(col => {
-            let def = `${col.name} ${col.type}`;
-            if (col.type === 'VARCHAR' && driver === 'sqlite') def = `${col.name} TEXT`;
-            if (!col.isNullable) def += ' NOT NULL';
-            return `ALTER TABLE ${table} ADD COLUMN ${def}`;
+            let def = blueprint.compileColumnType(col, driver);
+            
+            // Clean up name for ALTER TABLE syntax (Blueprint includes it in the definition)
+            const typeStr = def.replace(new RegExp(`^${col.name}\\s+`), '');
+            
+            let alterDef = `${col.name} ${typeStr}`;
+            if (col.type === 'VARCHAR' && driver === 'sqlite') alterDef = `${col.name} TEXT`;
+            if (!col.isNullable) alterDef += ' NOT NULL';
+            
+            if (col.afterColumn && driver === 'mysql') {
+                alterDef += ` AFTER ${col.afterColumn}`;
+            }
+
+            return `ALTER TABLE ${table} ADD COLUMN ${alterDef}`;
         });
 
         statements.push(...blueprint.toSql(driver).filter(s => s.startsWith('ALTER')));

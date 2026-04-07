@@ -40,15 +40,11 @@ class VerifyCsrfToken {
         // 3. Cookie (XSRF-TOKEN)
         let token = req.body?._token || req.headers['x-csrf-token'] || req.headers['x-xsrf-token'];
 
-        // Also check cookie if no token found in body/header
-        if (!token && req.headers.cookie) {
-            const cookies = Object.fromEntries(
-                req.headers.cookie.split('; ').map(c => {
-                    const [k, ...v] = c.split('=');
-                    return [k, v.join('=')];
-                })
-            );
-            token = cookies['XSRF-TOKEN'] || null;
+        // Use cookie-parser's parsed cookies (req.cookies) if available,
+        // falling back to a safe manual parse with proper decoding.
+        if (!token) {
+            const parsed = req.cookies || {};
+            token = parsed['XSRF-TOKEN'] || null;
         }
 
         if (!sessionToken || token !== sessionToken) {

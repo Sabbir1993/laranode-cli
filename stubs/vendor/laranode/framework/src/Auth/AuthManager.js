@@ -11,6 +11,13 @@ class AuthManager {
     }
 
     /**
+     * Get the currently authenticated user for the default or specified guard.
+     */
+    user(guard = null) {
+        return this.guard(guard).user();
+    }
+
+    /**
      * Get a guard instance by name.
      *
      * @param  {string|null}  name

@@ -43,12 +43,12 @@ class QueueWorkCommand extends Command {
             const JobClass = use(jobClassPath);
             jobInstance = new JobClass(payload.data);
 
-            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const timestamp = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
             this.info(`[${timestamp}] Processing: ${jobClassPath}`);
 
             await jobInstance.handle();
 
-            const endTimestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const endTimestamp = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
             this.info(`[${endTimestamp}] Processed:  ${jobClassPath}`);
 
             // Delete job if successful
@@ -56,7 +56,7 @@ class QueueWorkCommand extends Command {
                 await jobRecord.delete();
             }
         } catch (error) {
-            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+            const timestamp = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
             this.error(`[${timestamp}] Failed:     ${jobClassPath}`);
             this.error(error.message);
 
@@ -79,7 +79,7 @@ class QueueWorkCommand extends Command {
     async failJob(jobRecord, error) {
         const crypto = require('crypto');
         const uuid = crypto.randomUUID();
-        const failedAt = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const failedAt = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
 
         await DB.table('failed_jobs').insert({
             uuid: uuid,

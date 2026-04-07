@@ -150,6 +150,13 @@ class LogViewerController {
             loadingIndicator: document.getElementById('loadingIndicator')
         };
 
+        // Escape HTML to prevent XSS when inserting log data into innerHTML
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+        }
+
         function handleSearch(val) {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
@@ -177,11 +184,11 @@ class LogViewerController {
 
         function renderFiles() {
             ui.fileList.innerHTML = files.map(f => \`
-                <div class="file-item \${f.name === currentFile ? 'active' : ''}" onclick="loadFile('\${f.name}', 1)">
-                    <span class="file-name flex-1">\${f.name}</span>
-                    <span class="file-size">\${f.sizeStr}</span>
-                    <button class="ml-2 p-1 text-[#8b949e] hover:text-red-500 opacity-0 file-item:hover:opacity-100 transition-opacity" 
-                        onclick="event.stopPropagation(); deleteLogFile('\${f.name}')">
+                <div class="file-item \${f.name === currentFile ? 'active' : ''}" onclick="loadFile(\${JSON.stringify(f.name)}, 1)">
+                    <span class="file-name flex-1">\${esc(f.name)}</span>
+                    <span class="file-size">\${esc(f.sizeStr)}</span>
+                    <button class="ml-2 p-1 text-[#8b949e] hover:text-red-500 opacity-0 file-item:hover:opacity-100 transition-opacity"
+                        onclick="event.stopPropagation(); deleteLogFile(\${JSON.stringify(f.name)})">
                         <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                 </div>
@@ -254,13 +261,13 @@ class LogViewerController {
                 return \`
                 <div class="log-entry" onclick="this.classList.toggle('expanded')">
                     <div class="log-entry-row">
-                        <div class="col-sev py-1"><span class="badge \${badge}">\${entry.level}</span></div>
-                        <div class="col-date">\${entry.datetime}</div>
-                        <div class="col-env text-xs opacity-50">\${entry.env}</div>
-                        <div class="col-msg">\${entry.message}</div>
+                        <div class="col-sev py-1"><span class="badge \${esc(badge)}">\${esc(entry.level)}</span></div>
+                        <div class="col-date">\${esc(entry.datetime)}</div>
+                        <div class="col-env text-xs opacity-50">\${esc(entry.env)}</div>
+                        <div class="col-msg">\${esc(entry.message)}</div>
                     </div>
                     <div class="log-detail">
-                        <div class="log-detail-message">\${entry.message}\\n\${entry.stack || ''}</div>
+                        <div class="log-detail-message">\${esc(entry.message)}\\n\${esc(entry.stack || '')}</div>
                     </div>
                 </div>\`;
             }).join('');
@@ -318,10 +325,13 @@ class LogViewerController {
 
     async deleteFile(req, res) {
         const fileName = req.input('file');
-        if (!fileName) return res.status(400).send('File required');
-        
-        const filePath = path.join(base_path('storage/logs'), fileName);
-        if (fs.existsSync(filePath) && filePath.endsWith('.log')) {
+        // Reject anything that is not a bare filename (no path separators, must end in .log)
+        if (!fileName || path.basename(fileName) !== fileName || !fileName.endsWith('.log')) {
+            return res.status(400).send('Invalid file');
+        }
+        const logDir = base_path('storage/logs');
+        const filePath = path.resolve(logDir, fileName);
+        if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
             return res.status(200).send('Deleted');
         }
@@ -330,10 +340,12 @@ class LogViewerController {
 
     async clearFile(req, res) {
         const fileName = req.input('file');
-        if (!fileName) return res.status(400).send('File required');
-        
-        const filePath = path.join(base_path('storage/logs'), fileName);
-        if (fs.existsSync(filePath) && filePath.endsWith('.log')) {
+        if (!fileName || path.basename(fileName) !== fileName || !fileName.endsWith('.log')) {
+            return res.status(400).send('Invalid file');
+        }
+        const logDir = base_path('storage/logs');
+        const filePath = path.resolve(logDir, fileName);
+        if (fs.existsSync(filePath)) {
             fs.writeFileSync(filePath, '');
             return res.status(200).send('Cleared');
         }

@@ -113,8 +113,11 @@ class Handler {
             }
 
             if (fs.existsSync(appHtmlPath)) {
+                const escMsg = (s) => String(s || '')
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
                 let html = fs.readFileSync(appHtmlPath, 'utf-8');
-                html = html.replace('{{message}}', message);
+                html = html.replace('{{message}}', escMsg(message));
                 return response.status(statusCode).send(html);
             }
 
@@ -125,8 +128,9 @@ class Handler {
             console.error('Error rendering error page:', e);
         }
 
+        // statusCode is a number and getErrorTitle returns from a hardcoded map — both are safe
         return res.status(statusCode).send(
-            `<h1>${statusCode} - ${this.getErrorTitle(statusCode)}</h1><p>${message}</p>`
+            `<h1>${statusCode} - ${this.getErrorTitle(statusCode)}</h1><p>An unexpected error occurred.</p>`
         );
     }
 
@@ -169,11 +173,15 @@ class Handler {
     }
 
     buildPrettyHtml(error) {
+        const esc = (s) => String(s || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+
         const stackFrames = (error.stack || '').split('\n').map(line => line.trim()).filter(line => line.startsWith('at '));
 
         let framesHtml = stackFrames.map((frame, i) => {
             return `<div class="frame ${i === 0 ? 'active' : ''}">
-                <div class="frame-method">${frame.replace(/^at\s+/, '')}</div>
+                <div class="frame-method">${esc(frame.replace(/^at\s+/, ''))}</div>
             </div>`;
         }).join('');
 
@@ -199,8 +207,8 @@ class Handler {
         </head>
         <body>
             <div class="header">
-                <h1>${error.name || 'Error'}</h1>
-                <h2>${error.message}</h2>
+                <h1>${esc(error.name || 'Error')}</h1>
+                <h2>${esc(error.message)}</h2>
             </div>
             <div class="content">
                 <div class="sidebar">
@@ -208,7 +216,7 @@ class Handler {
                 </div>
                 <div class="main">
                     <h3>Stack Trace</h3>
-                    <div class="code-block">${error.stack}</div>
+                    <div class="code-block">${esc(error.stack)}</div>
                 </div>
             </div>
         </body>

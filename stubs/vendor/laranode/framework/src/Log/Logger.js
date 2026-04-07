@@ -35,7 +35,7 @@ class Logger {
      * @returns {string}
      */
     formatMessage(level, message, context = {}) {
-        const date = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const date = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
         const env = this.app.make('config').get('app.env', 'local');
 
         let contextStr = '';
@@ -86,11 +86,12 @@ class Logger {
         const dir = path.dirname(basePathLog);
 
         if (driver === 'daily') {
-            const timestamp = date.toISOString().split('T')[0]; // YYYY-MM-DD
+            const timestamp = date.toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' }).split(' ')[0]; // YYYY-MM-DD
             targetPath = path.join(dir, `${basename}-${timestamp}${ext}`);
         } else if (driver === 'hourly') {
-            const timestamp = date.toISOString().split('T')[0];
-            const hour = String(date.getHours()).padStart(2, '0');
+            const localFormat = date.toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
+            const timestamp = localFormat.split(' ')[0];
+            const hour = localFormat.split(' ')[1].split(':')[0];
             targetPath = path.join(dir, `${basename}-${timestamp}-${hour}${ext}`);
         }
 

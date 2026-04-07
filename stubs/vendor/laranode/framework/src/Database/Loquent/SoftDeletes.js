@@ -41,7 +41,7 @@ function SoftDeletes(Base) {
                 return result > 0;
             }
 
-            const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const now = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
             this.attributes[this.getDeletedAtColumn()] = now;
 
             await this.constructor.query()

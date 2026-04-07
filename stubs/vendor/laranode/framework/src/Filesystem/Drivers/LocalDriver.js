@@ -22,9 +22,15 @@ class LocalDriver {
 
     /**
      * Get the full path for a given file.
+     * Blocks directory traversal attempts (e.g. ../../etc/passwd).
      */
     path(filePath) {
-        return path.join(this.root, filePath);
+        const resolved = path.resolve(this.root, filePath);
+        const rootResolved = path.resolve(this.root) + path.sep;
+        if (!resolved.startsWith(rootResolved) && resolved !== path.resolve(this.root)) {
+            throw new Error(`Path traversal attempt blocked: ${filePath}`);
+        }
+        return resolved;
     }
 
     /**

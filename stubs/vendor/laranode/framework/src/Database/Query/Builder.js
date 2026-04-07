@@ -597,7 +597,32 @@ class Builder {
 
     // ─── Execution — Pagination ───────────────────────────
 
-    async paginate(perPage = 15, currentPage = 1, options = {}) {
+    /**
+     * Paginate the query results.
+     * Searches for 'page' parameter in query/body/params automatically if currentPage is not a number.
+     */
+    async paginate(perPage = 15, currentPage = null, options = {}) {
+        // 1. If currentPage is missing or a Request object, detect from it
+        if (currentPage === null || (typeof currentPage === 'object' && currentPage !== null)) {
+            let request = currentPage;
+            
+            // If no request passed, try to detect from HttpContext
+            if (!request) {
+                try {
+                    const HttpContext = use('laranode/Foundation/Http/HttpContext');
+                    request = HttpContext.getRequest();
+                } catch (e) { /* Framework not fully bootstrapped or running in script */ }
+            }
+
+            // Extract page from request (searches query, body, and params automatically)
+            if (request && typeof request.input === 'function') {
+                const reqPage = parseInt(request.input('page'));
+                currentPage = (!isNaN(reqPage) && reqPage > 0) ? reqPage : 1;
+            } else {
+                currentPage = 1;
+            }
+        }
+
         const total = await this.count();
         const offset = (currentPage - 1) * perPage;
 

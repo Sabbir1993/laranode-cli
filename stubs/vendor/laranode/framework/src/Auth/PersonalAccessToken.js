@@ -16,7 +16,9 @@ class PersonalAccessToken extends Model {
     }
 
     can(ability) {
-        const abilities = JSON.parse(this.attributes.abilities || '[]');
+        let abilities;
+        try { abilities = JSON.parse(this.attributes.abilities || '[]'); } catch { abilities = []; }
+        if (!Array.isArray(abilities)) return false;
         return abilities.includes('*') || abilities.includes(ability);
     }
 }

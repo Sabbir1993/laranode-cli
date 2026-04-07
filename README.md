@@ -1075,8 +1075,7 @@ LaraNode provides two types of paginators — `paginate()` for full page-number 
 ```javascript
 // In a controller
 async index(req, res) {
-    const page = parseInt(req.query.page) || 1;
-    const users = await User.where('active', true).paginate(15, page);
+    const users = await User.where('active', true).paginate(10);
 
     // For API responses
     return res.json(users.toArray());
@@ -1105,8 +1104,7 @@ For large datasets where you don't need the total count:
 
 ```javascript
 async index(req, res) {
-    const page = parseInt(req.query.page) || 1;
-    const users = await User.simplePaginate(15, page);
+    const users = await User.simplePaginate(15);
 
     return res.view('users.index', {
         users: users.items,

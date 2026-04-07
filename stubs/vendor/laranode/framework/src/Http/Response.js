@@ -68,8 +68,12 @@ class Response {
             const viewPath = path.join(__dirname, '../Foundation/resources/views/errors', code + '.edge');
             if (fs.existsSync(viewPath)) {
                 let html = fs.readFileSync(viewPath, 'utf8');
-                // Inject message into {{message}} placeholder (Edge raw output or escaped)
-                html = html.replace(/\{\{-?\s*message\s*-?\}\}/g, message || '');
+                // Escape before injecting into HTML to prevent reflected XSS
+                const safe = (str) => String(str)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#x27;');
+                html = html.replace(/\{\{-?\s*message\s*-?\}\}/g, safe(message || ''));
                 return this.res.send(html);
             }
         }

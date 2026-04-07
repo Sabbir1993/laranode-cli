@@ -58,8 +58,9 @@ class PasswordBroker {
         // Generate random token
         const token = crypto.randomBytes(64).toString('hex');
 
-        // Hash token for storage (like Laravel)
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        // HMAC-SHA256 keyed with APP_KEY so DB-only compromise can't reverse tokens
+        const secret = process.env.APP_KEY || '';
+        const hashedToken = crypto.createHmac('sha256', secret).update(token).digest('hex');
 
         // Delete any existing tokens for this user
         await DB.table(this.passwordResetTable)
@@ -70,7 +71,7 @@ class PasswordBroker {
         await DB.table(this.passwordResetTable).insert({
             email: user.email,
             token: hashedToken,
-            created_at: new Date().toISOString()
+            created_at: new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' })
         });
 
         return token;
@@ -87,8 +88,9 @@ class PasswordBroker {
         const DB = use('laranode/Support/Facades/DB');
         const Hash = use('laranode/Support/Facades/Hash');
 
-        // Hash the incoming token
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        // HMAC-SHA256 keyed with APP_KEY (must match createResetToken)
+        const secret = process.env.APP_KEY || '';
+        const hashedToken = crypto.createHmac('sha256', secret).update(token).digest('hex');
 
         // Find valid reset record
         const resetRecord = await DB.table(this.passwordResetTable)
@@ -137,10 +139,11 @@ class PasswordBroker {
      * @returns {boolean}
      */
     validatePassword(password) {
-        // Minimum 8 characters
-        if (!password || password.length < 8) {
-            return false;
-        }
+        if (!password || password.length < 12) return false;
+        if (!/[A-Z]/.test(password)) return false;   // uppercase
+        if (!/[a-z]/.test(password)) return false;   // lowercase
+        if (!/[0-9]/.test(password)) return false;   // digit
+        if (!/[^A-Za-z0-9]/.test(password)) return false; // special char
         return true;
     }
 

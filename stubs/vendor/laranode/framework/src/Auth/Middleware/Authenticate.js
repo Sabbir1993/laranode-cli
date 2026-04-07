@@ -32,8 +32,11 @@ class Authenticate {
 
                     if (id && plainTextToken) {
                         const config = use('laranode/Support/Facades/Config');
-                        const hashConfig = config.get('auth.guards.api.hash_tokens');
-                        const shouldHash = hashConfig === undefined ? true : hashConfig;
+                        // Fail-safe: always hash unless explicitly disabled; warn loudly if so
+                        const shouldHash = config.get('auth.guards.api.hash_tokens') !== false;
+                        if (!shouldHash) {
+                            console.warn('[SECURITY] API token hashing is disabled (auth.guards.api.hash_tokens=false). Tokens are stored in plaintext.');
+                        }
                         const searchToken = shouldHash
                             ? crypto.createHash('sha256').update(plainTextToken).digest('hex')
                             : plainTextToken;

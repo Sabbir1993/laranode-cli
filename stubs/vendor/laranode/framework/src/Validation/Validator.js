@@ -464,7 +464,29 @@ class Validator {
     async validate() {
         if (this.hasRun) return !this._errors.isEmpty();
 
+        const explodedRules = {};
         for (const [attribute, ruleConfig] of Object.entries(this.rules)) {
+            if (attribute.includes('*')) {
+                const parts = attribute.split('.');
+                const firstWildcardIndex = parts.indexOf('*');
+                const parentPath = parts.slice(0, firstWildcardIndex).join('.');
+                const parentData = this.getValue(parentPath);
+
+                if (Array.isArray(parentData)) {
+                    parentData.forEach((_, index) => {
+                        const concretePath = parts.map((p, i) => i === firstWildcardIndex ? index : p).join('.');
+                        // Keep track of the original wildcard path for error message lookup
+                        if (!this._wildcardMappings) this._wildcardMappings = {};
+                        this._wildcardMappings[concretePath] = attribute;
+                        explodedRules[concretePath] = ruleConfig;
+                    });
+                }
+                continue;
+            }
+            explodedRules[attribute] = ruleConfig;
+        }
+
+        for (const [attribute, ruleConfig] of Object.entries(explodedRules)) {
             const rulesArray = typeof ruleConfig === 'string' ? ruleConfig.split('|') : ruleConfig;
             let bail = false;
 
@@ -602,8 +624,11 @@ class Validator {
      * @param {Array} params 
      */
     addError(attribute, rule, params) {
+        const wildcardPath = this._wildcardMappings ? this._wildcardMappings[attribute] : null;
+
         let message = this.customMessages[`${attribute}.${rule}`] ||
             this.customMessages[attribute] ||
+            (wildcardPath ? (this.customMessages[`${wildcardPath}.${rule}`] || this.customMessages[wildcardPath]) : null) ||
             Validator.customMessages[rule];
 
         if (!message && typeof __ === 'function') {

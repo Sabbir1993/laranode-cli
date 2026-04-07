@@ -285,7 +285,7 @@ class Model {
 
             async attach(ids, attributes = {}) {
                 if (!Array.isArray(ids)) ids = [ids];
-                const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+                const now = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
                 const records = ids.map(id => {
                     const record = { [foreignPivotKey]: localId, [relatedPivotKey]: id, ...attributes };
                     if (this.withTimestampsFlag) {
@@ -873,7 +873,7 @@ class Model {
     }
 
     async save() {
-        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const now = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
 
         // Fire saving event — can cancel
         if (await this.fireEvent('saving') === false) return false;
@@ -887,11 +887,20 @@ class Model {
 
         const query = this.constructor._rawQuery();
 
+        // Filter attributes to only include fillable/table columns for DB operations
+        const saveAttributes = {};
+        for (const key of Object.keys(this.attributes)) {
+            // Include if it's in the fillable list, or it's a primary/timestamp column
+            if (this.isFillable(key) || [this.primaryKey, 'created_at', 'updated_at', 'deleted_at'].includes(key)) {
+                saveAttributes[key] = this.attributes[key];
+            }
+        }
+
         if (this.exists) {
             // Fire updating event — can cancel
             if (await this.fireEvent('updating') === false) return false;
 
-            await query.where(this.primaryKey, this.attributes[this.primaryKey]).update(this.attributes);
+            await query.where(this.primaryKey, this.attributes[this.primaryKey]).update(saveAttributes);
 
             this.changes = this.getDirty();
             this.original = { ...this.attributes };
@@ -901,7 +910,7 @@ class Model {
             // Fire creating event — can cancel
             if (await this.fireEvent('creating') === false) return false;
 
-            const id = await query.insertGetId(this.attributes);
+            const id = await query.insertGetId(saveAttributes);
             this.attributes[this.primaryKey] = id;
             this.exists = true;
 
@@ -970,7 +979,7 @@ class Model {
 
     touch() {
         if (!this.timestamps) return this;
-        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const now = new Date().toLocaleString('sv-SE', { timeZone: process.env.TZ || 'Asia/Dhaka' });
         this.attributes['updated_at'] = now;
         return this.save();
     }

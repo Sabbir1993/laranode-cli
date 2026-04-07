@@ -31,16 +31,10 @@ class EncryptionManager {
             this.key = Buffer.from(key, 'utf8');
         }
 
-        // Ensure key is exactly 32 bytes for AES-256
-        if (this.key.length < 32) {
-            // Pad with zeros if too short
-            const padded = Buffer.alloc(32);
-            this.key.copy(padded);
-            this.key = padded;
-        } else if (this.key.length > 32) {
-            // Truncate if too long
-            this.key = this.key.slice(0, 32);
-        }
+        // Derive a fixed 32-byte key via HKDF regardless of input length.
+        // This replaces the previous zero-padding / truncation approach which
+        // silently produced weak or colliding keys for non-32-byte inputs.
+        this.key = crypto.hkdfSync('sha256', this.key, Buffer.alloc(0), 'laranode-enc-v1', 32);
     }
 
     /**

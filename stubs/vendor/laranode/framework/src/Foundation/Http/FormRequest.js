@@ -225,6 +225,15 @@ class FormRequest extends Request {
     }
 
     /**
+     * Get the authenticated user.
+     * @returns {Object|null}
+     */
+    user() {
+        // req.user is set as a property by AuthMiddleware
+        return this.req.user || null;
+    }
+
+    /**
      * Get a subset of the input data.
      * @param {Array} keys 
      * @returns {Object}
@@ -380,7 +389,7 @@ class FormRequest extends Request {
      * @returns {object|null}
      */
     file(key) {
-        return this.req.files ? this.req.files[key] || null : null;
+        return super.file(key);
     }
 
     /**

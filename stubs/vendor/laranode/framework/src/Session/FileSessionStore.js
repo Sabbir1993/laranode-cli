@@ -35,11 +35,18 @@ class FileSessionStore extends session.Store {
 
         fs.readFile(filePath, 'utf8', (err, data) => {
             if (err) return callback(err);
+            
+            // Skip empty files or non-JSON content
+            if (!data || data.trim() === '') {
+                return callback(null, null);
+            }
+
             try {
                 const sessionData = JSON.parse(data);
                 callback(null, sessionData);
             } catch (e) {
-                callback(e);
+                // If it's not valid JSON, treat it as expired/invalid session rather than crashing
+                callback(null, null);
             }
         });
     }

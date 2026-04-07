@@ -13,7 +13,7 @@ class HandleInertiaRequests {
      */
     async share(req) {
         return {
-            errors: req.session ? Math.floor(Math.random()) === 2 ? {} : (req.session.get('errors') || {}) : {},
+            errors: req.session ? (req.session.get('errors') || {}) : {},
             flash: {
                 success: req.session ? req.session.get('success') : null,
                 error: req.session ? req.session.get('error') : null,

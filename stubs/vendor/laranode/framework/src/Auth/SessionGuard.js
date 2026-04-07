@@ -10,13 +10,13 @@ class SessionGuard {
 
     /**
      * Get the session key used for authentication state.
-     * Fixed to be stable across restarts.
+     * Uses SHA-256 instead of the broken MD5 algorithm.
      *
      * @return {string}
      */
     getName() {
         const crypto = require('crypto');
-        return 'login_' + this.name + '_' + crypto.createHash('md5').update(this.name + '_guard').digest('hex');
+        return 'login_' + this.name + '_' + crypto.createHash('sha256').update(this.name + '_guard').digest('hex');
     }
 
     /**
@@ -71,11 +71,22 @@ class SessionGuard {
 
         // 4. Handle "Remember Me" if requested
         if (remember) {
+            const crypto = require('crypto');
             const res = response();
             const expressRes = res && res.res; // Get underlying Express response
             if (expressRes && typeof expressRes.cookie === 'function') {
-                expressRes.cookie('remember_token', 'remember_' + this.name + '_' + user.id, {
+                // Use a cryptographically random token instead of a predictable format
+                const rememberToken = crypto.randomBytes(40).toString('hex');
+                // Store the SHA-256 hash in the DB so the plaintext never persists server-side
+                const tokenHash = crypto.createHash('sha256').update(rememberToken).digest('hex');
+                if (user.save) {
+                    user.remember_token = tokenHash;
+                    await user.save();
+                }
+                expressRes.cookie('remember_token', rememberToken, {
                     httpOnly: true,
+                    secure: process.env.APP_ENV !== 'local',
+                    sameSite: 'strict',
                     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
                 });
             }
