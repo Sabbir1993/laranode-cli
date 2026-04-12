@@ -59,6 +59,9 @@ class FileSessionStore extends session.Store {
         const data = JSON.stringify(sessionData);
 
         fs.writeFile(filePath, data, 'utf8', (err) => {
+            if (err) {
+                console.error(`[FileSessionStore] Failed to write session file ${filePath}:`, err);
+            }
             if (callback) callback(err);
         });
     }

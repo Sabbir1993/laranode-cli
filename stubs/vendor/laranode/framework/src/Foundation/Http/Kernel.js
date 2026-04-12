@@ -44,6 +44,17 @@ class Kernel {
     async handle() {
         await this.bootstrap();
 
+        // Trust the reverse proxy to ensure secure cookies and correct IP detection
+        this.expressApp.set('trust proxy', true);
+
+        // Workaround for Reverse Proxies (Nginx, Apache) that omit X-Forwarded-Proto
+        this.expressApp.use((req, res, next) => {
+            if (process.env.APP_ENV === 'production') {
+                req.headers['x-forwarded-proto'] = 'https';
+            }
+            next();
+        });
+
         // 1. Setup global express middleware (body parser etc)
         this.expressApp.use(helmet({
             contentSecurityPolicy: false,
