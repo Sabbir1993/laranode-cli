@@ -13,6 +13,7 @@ class Request {
             'read', 'write', 'pipe', 'unpipe', 'destroy', 'resume', 'pause',
             'emit', 'on', 'once', 'addListener', 'removeListener', 'removeAllListeners',
             'session', // LaraNode wraps this with .get()/.put()/.forget() API
+            'flash',   // LaraNode wraps this so this.req.flash() is called with correct context
         ]);
         return new Proxy(this, {
             get(target, prop, receiver) {
