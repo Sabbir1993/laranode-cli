@@ -1,6 +1,6 @@
 {
     "name": "laranode-cli",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "description": "The LaraNode Framework CLI Installer",
     "author": "Sabbir Hosain Chowdury <sabbirchowdury000@gmail.com>",
     "main": "bin/laranode.js",
@@ -22,7 +22,7 @@
         "type": "git",
         "url": "https://github.com/Sabbir1993/laranode-cli/tree/master"
     },
-    "homepage": "https://github.com/Sabbir1993/laranode-cli/tree/master",
+    "homepage": "https://laranode-doc.up.railway.app",
     "dependencies": {
         "commander": "^14.0.3"
     }

@@ -92,16 +92,76 @@
             letter-spacing: 1px;
         }
 
+        /* Info / warning / tip boxes */
+        .info-box, .warning-box, .tip-box {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+            border-left: 4px solid;
+        }
+        .info-box    { background: rgba(59,130,246,0.1); border-color: #3b82f6; color: #93c5fd; }
+        .warning-box { background: rgba(245,158,11,0.1); border-color: #f59e0b; color: #fcd34d; }
+        .tip-box     { background: rgba(16,185,129,0.1); border-color: #10b981; color: #6ee7b7; }
+
+        /* Method badge */
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.55rem;
+            border-radius: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: 'Fira Code', monospace;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        .badge-get    { background: #1d4ed8; color: #bfdbfe; }
+        .badge-post   { background: #166534; color: #bbf7d0; }
+        .badge-put    { background: #92400e; color: #fef3c7; }
+        .badge-delete { background: #9f1239; color: #fecdd3; }
+
+        /* Docs table */
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }
+        th { text-align: left; padding: 0.75rem 1rem; background: rgba(30,41,59,0.8); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--glass-border); color: #cbd5e1; vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        td code { background: rgba(30,41,59,0.8); padding: 0.1rem 0.4rem; border-radius: 0.25rem; font-size: 0.85rem; }
+
+        /* Two-col layout */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+        .card { background: rgba(30,41,59,0.5); border: 1px solid var(--glass-border); border-radius: 0.75rem; padding: 1.25rem; }
+        .card h4 { color: var(--primary); margin-bottom: 0.5rem; font-size: 1rem; }
+        .card p { font-size: 0.9rem; margin: 0; color: var(--text-muted); }
+
+        /* Search box */
+        .search-wrap { margin-bottom: 1.5rem; }
+        .search-wrap input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: rgba(30,41,59,0.9);
+            border: 1px solid var(--glass-border);
+            border-radius: 0.5rem;
+            color: #f1f5f9;
+            font-size: 0.875rem;
+            outline: none;
+        }
+        .search-wrap input::placeholder { color: var(--text-muted); }
+        .search-wrap input:focus { border-color: var(--primary); }
+
         @media (max-width: 1000px) {
             aside { display: none; }
             main { padding: 2rem; }
+            .two-col { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <aside>
         <div class="logo">Lara<span>Node</span></div>
-        <nav>
+        <div class="search-wrap">
+            <input type="text" id="doc-search" placeholder="Search docs…" />
+        </div>
+        <nav id="sidebar-nav">
             <h3>Getting Started</h3>
             <ul>
                 <li><a href="#introduction">Introduction</a></li>
@@ -113,7 +173,7 @@
                 <li><a href="#facades">Facades</a></li>
                 <li><a href="#helpers">Helpers</a></li>
             </ul>
-            <h3>Basics</h3>
+            <h3>Routing &amp; HTTP</h3>
             <ul>
                 <li><a href="#routing">Routing</a></li>
                 <li><a href="#controllers">Controllers</a></li>
@@ -127,14 +187,16 @@
                 <li><a href="#query-builder">Query Builder</a></li>
                 <li><a href="#migrations">Migrations &amp; Schema</a></li>
             </ul>
-            <h3>The Frontend</h3>
+            <h3>Frontend</h3>
             <ul>
                 <li><a href="#templating">Edge Templating</a></li>
+                <li><a href="#inertia">Inertia.js (SPAs)</a></li>
                 <li><a href="#localization">Localization</a></li>
             </ul>
             <h3>Security</h3>
             <ul>
                 <li><a href="#authentication">Authentication</a></li>
+                <li><a href="#authorization">Authorization</a></li>
                 <li><a href="#security">CSRF &amp; CORS</a></li>
             </ul>
             <h3>Services</h3>
@@ -147,11 +209,18 @@
                 <li><a href="#mail">Mail</a></li>
                 <li><a href="#notifications">Notifications</a></li>
             </ul>
-            <h3>Advanced</h3>
+            <h3>Monitoring &amp; Errors</h3>
             <ul>
-                <li><a href="#testing">Testing</a></li>
-                <li><a href="#performance">Performance (Caching)</a></li>
+                <li><a href="#logging">Logging</a></li>
+                <li><a href="#log-viewer">Log Viewer</a></li>
+                <li><a href="#exceptions">Exception Handling</a></li>
+            </ul>
+            <h3>CLI &amp; Dev Tools</h3>
+            <ul>
                 <li><a href="#artisan">Artisan CLI</a></li>
+                <li><a href="#tinker">Tinker REPL</a></li>
+                <li><a href="#testing">Testing</a></li>
+                <li><a href="#performance">Performance</a></li>
                 <li><a href="#http-client">HTTP Client</a></li>
                 <li><a href="#process">The Lifecycle</a></li>
             </ul>
@@ -159,6 +228,7 @@
     </aside>
 
     <main>
+
         <!-- GETTING STARTED -->
         <section id="introduction">
             <h1>Introduction</h1>
@@ -782,6 +852,163 @@ return res.view('users.show', { user });
 &#64;endforeach</code></pre>
         </section>
 
+        <!-- ============================================================ -->
+        <!-- INERTIA.JS -->
+        <!-- ============================================================ -->
+        <section id="inertia">
+            <h2>Inertia.js — Modern SPAs</h2>
+            <p>LaraNode has out-of-the-box support for <strong>Inertia.js</strong>, letting you build modern single-page applications using React, Vue, or Svelte—all powered by your LaraNode controllers. No separate API required.</p>
+
+            <div class="tip-box">
+                <strong>Key idea:</strong> The server returns React/Vue component names + props instead of HTML. Inertia handles the client-side rendering, partial reloads, and history management automatically.
+            </div>
+
+            <h3>1. Install Dependencies</h3>
+            <pre><code>npm install @inertiajs/react react react-dom
+npm install --save-dev @vitejs/plugin-react vite</code></pre>
+
+            <h3>2. Enable in config/app.js</h3>
+            <pre><code>providers: [
+    require(base_path('vendor/laranode/framework/src/Support/Inertia/InertiaServiceProvider')),
+]</code></pre>
+
+            <h3>3. Configure Vite</h3>
+            <pre><code>// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+    plugins: [react()],
+    build: {
+        outDir: 'public/build',
+        manifest: true,
+        rollupOptions: { input: 'resources/js/app.jsx' },
+    },
+});</code></pre>
+
+            <h3>4. Root Edge Template</h3>
+            <pre><code>&lt;!-- resources/views/app.edge --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8" /&gt;
+    &lt;title inertia&gt;{{ config('app.name') }}&lt;/title&gt;
+    @vite('resources/js/app.jsx')
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;!-- Inertia mounts here — server injects the page payload --&gt;
+    &lt;div id="app" data-page="{!! jsonPage !!}"&gt;&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+            <h3>5. JavaScript Entry Point</h3>
+            <pre><code>// resources/js/app.jsx
+import { createRoot } from 'react-dom/client';
+import { createInertiaApp } from '@inertiajs/react';
+
+createInertiaApp({
+    resolve: (name) => resolvePageComponent(name, import.meta.glob('./Pages/**/*.jsx')),
+    setup({ el, App, props }) {
+        createRoot(el).render(&lt;App {...props} /&gt;);
+    },
+});
+
+function resolvePageComponent(path, modules) {
+    for (const filePath in modules) {
+        if (filePath.endsWith(path + '.jsx')) return modules[filePath];
+    }
+    throw new Error(`Page not found: ${path}`);
+}</code></pre>
+
+            <h3>Server-Side: Controller</h3>
+            <pre><code>// Return an Inertia response — renders resources/js/Pages/Posts/Index.jsx
+async index(req, res) {
+    const posts = await Post.with('author').paginate(15);
+    return res.inertia('Posts/Index', {
+        posts: posts.items,
+        meta: posts.toArray().meta,
+    });
+}
+
+// With flash message redirect
+async store(req, res) {
+    const post = await Post.create(req.validate({
+        title: 'required|string|max:255',
+        content: 'required|string',
+    }));
+    return res.redirect()
+        .route('posts.show', { id: post.id })
+        .with('success', 'Post created!');
+}</code></pre>
+
+            <h3>Client-Side: React Component</h3>
+            <pre><code>// resources/js/Pages/Posts/Index.jsx
+import { Link, useForm } from '@inertiajs/react';
+
+export default function PostsIndex({ posts, meta, flash }) {
+    return (
+        &lt;div&gt;
+            {flash.success &amp;&amp; &lt;div className="alert"&gt;{flash.success}&lt;/div&gt;}
+            &lt;h1&gt;Posts&lt;/h1&gt;
+            &lt;Link href="/posts/create"&gt;Create Post&lt;/Link&gt;
+
+            {posts.map(post =&gt; (
+                &lt;article key={post.id}&gt;
+                    &lt;h2&gt;&lt;Link href={`/posts/${post.id}`}&gt;{post.title}&lt;/Link&gt;&lt;/h2&gt;
+                    &lt;p&gt;By {post.author.name}&lt;/p&gt;
+                &lt;/article&gt;
+            ))}
+
+            {/* Pagination */}
+            {meta.current_page &gt; 1 &amp;&amp; &lt;Link href={`/posts?page=${meta.current_page - 1}`}&gt;Prev&lt;/Link&gt;}
+            &lt;span&gt;Page {meta.current_page} of {meta.last_page}&lt;/span&gt;
+            {meta.current_page &lt; meta.last_page &amp;&amp; &lt;Link href={`/posts?page=${meta.current_page + 1}`}&gt;Next&lt;/Link&gt;}
+        &lt;/div&gt;
+    );
+}</code></pre>
+
+            <h3>Form Handling with useForm</h3>
+            <pre><code>// resources/js/Pages/Posts/Create.jsx
+import { useForm } from '@inertiajs/react';
+
+export default function CreatePost({ categories }) {
+    const { data, setData, post, processing, errors } = useForm({
+        title: '', content: '', category_id: '',
+    });
+
+    return (
+        &lt;form onSubmit={e =&gt; { e.preventDefault(); post('/posts'); }}&gt;
+            &lt;input value={data.title} onChange={e =&gt; setData('title', e.target.value)} /&gt;
+            {errors.title &amp;&amp; &lt;span className="error"&gt;{errors.title}&lt;/span&gt;}
+
+            &lt;textarea value={data.content} onChange={e =&gt; setData('content', e.target.value)} /&gt;
+            {errors.content &amp;&amp; &lt;span className="error"&gt;{errors.content}&lt;/span&gt;}
+
+            &lt;button disabled={processing}&gt;Create Post&lt;/button&gt;
+        &lt;/form&gt;
+    );
+}</code></pre>
+
+            <h3>Shared Data (Global Props)</h3>
+            <pre><code>// app/Http/Middleware/HandleInertiaRequests.js
+class HandleInertiaRequests extends Middleware {
+    props(req, res) {
+        return {
+            auth: { user: req.user },
+            app: { name: config('app.name') },
+            flash: {
+                success: req.session.get('success'),
+                error:   req.session.get('error'),
+            },
+        };
+    }
+}
+
+// In any component
+import { usePage } from '@inertiajs/react';
+const { auth, flash } = usePage().props;</code></pre>
+        </section>
+
         <section id="localization">
             <h2>Localization</h2>
             <p>LaraNode's localization features provide a convenient way to retrieve strings in various languages.</p>
@@ -841,6 +1068,131 @@ const encrypted = Crypt.encrypt('sensitive-data');
 const decrypted = Crypt.decrypt(encrypted);</code></pre>
         </section>
 
+        <!-- ============================================================ -->
+        <!-- AUTHORIZATION -->
+        <!-- ============================================================ -->
+        <section id="authorization">
+            <h2>Authorization</h2>
+            <p>LaraNode provides two primary ways to authorize actions: <strong>Gates</strong> (simple closures) and <strong>Policies</strong> (class-based logic tied to models). Authorization is the layer that answers <em>"What can you do?"</em> after authentication answers <em>"Who are you?"</em></p>
+
+            <h3>Gates</h3>
+            <p>Define gates in <code>app/Providers/AuthServiceProvider.js</code>:</p>
+            <pre><code>const Gate = use('laranode/Support/Facades/Gate');
+
+class AuthServiceProvider {
+    boot() {
+        // Simple gate
+        Gate.define('view-dashboard', (user) => user.is_admin);
+
+        // Gate with model parameter
+        Gate.define('edit-post', (user, post) => user.id === post.user_id);
+
+        // Async gate (database check)
+        Gate.define('view-team', async (user, team) => {
+            return await user.teams().where('team_id', team.id).exists();
+        });
+
+        // Admin bypass — runs before any gate check
+        Gate.before((user, ability) => {
+            if (user.is_admin) return true;
+        });
+    }
+}</code></pre>
+
+            <h3>Using Gates in Controllers</h3>
+            <pre><code>// Check and throw 403 automatically
+this.authorize('edit-post', post);
+
+// Check without throwing
+if (req.user.can('edit-post', post)) {
+    // ...
+}
+
+// Check denial
+if (req.user.cannot('delete-post', post)) {
+    return res.status(403).json({ error: 'Forbidden' });
+}</code></pre>
+
+            <h3>Policies</h3>
+            <p>Policies organize authorization for a specific model. Create one with:</p>
+            <pre><code>node artisan make:policy PostPolicy --model=Post</code></pre>
+            <pre><code>// app/Policies/PostPolicy.js
+class PostPolicy {
+    // Runs before every check — return true to bypass
+    before(user, ability) {
+        if (user.is_admin) return true;
+    }
+
+    viewAny(user) { return true; }
+
+    view(user, post) {
+        return post.is_published || user.id === post.user_id;
+    }
+
+    create(user) { return user.email_verified_at !== null; }
+
+    update(user, post) { return user.id === post.user_id; }
+
+    delete(user, post) { return user.id === post.user_id; }
+}
+
+module.exports = PostPolicy;</code></pre>
+
+            <h3>Registering Policies</h3>
+            <pre><code>// app/Providers/AuthServiceProvider.js
+const Post = use('App/Models/Post');
+const PostPolicy = use('App/Policies/PostPolicy');
+
+class AuthServiceProvider {
+    boot() {
+        Gate.policy(Post, PostPolicy);
+    }
+}</code></pre>
+
+            <h3>Using Policies in Controllers</h3>
+            <pre><code>class PostController extends Controller {
+    async show(req, res) {
+        const post = await Post.findOrFail(req.params.id);
+        this.authorize('view', post);        // Uses PostPolicy.view()
+        return res.view('posts.show', { post });
+    }
+
+    async update(req, res) {
+        const post = await Post.findOrFail(req.params.id);
+        this.authorize('update', post);      // Uses PostPolicy.update()
+        await post.update(req.validate({...}));
+        return res.redirect().route('posts.show', { id: post.id });
+    }
+}</code></pre>
+
+            <h3>Role-Based Authorization</h3>
+            <pre><code>// app/Http/Middleware/RequireRole.js
+module.exports = (requiredRole) => (req, res, next) => {
+    if (!req.user || req.user.role !== requiredRole) {
+        return res.status(403).json({ error: `Requires ${requiredRole} role` });
+    }
+    return next();
+};
+
+// routes/web.js
+Route.group({ middleware: [RequireRole('admin')] }, () => {
+    Route.resource('users', 'UserController');
+});</code></pre>
+
+            <table>
+                <thead><tr><th>Method</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>Gate.define(name, fn)</code></td><td>Register a simple closure gate</td></tr>
+                    <tr><td><code>Gate.policy(Model, Policy)</code></td><td>Register a policy class for a model</td></tr>
+                    <tr><td><code>Gate.before(fn)</code></td><td>Run before all gate/policy checks</td></tr>
+                    <tr><td><code>Gate.after(fn)</code></td><td>Run after all gate/policy checks</td></tr>
+                    <tr><td><code>user.can(ability, model)</code></td><td>Returns true/false</td></tr>
+                    <tr><td><code>user.cannot(ability, model)</code></td><td>Inverse of <code>can()</code></td></tr>
+                    <tr><td><code>this.authorize(ability, model)</code></td><td>Throws 403 if unauthorized</td></tr>
+                </tbody>
+            </table>
+        </section>
+
         <section id="security">
             <h2>CSRF &amp; CORS</h2>
             <p>LaraNode includes middleware to protect your application from cross-site request forgery and manage cross-origin resource sharing.</p>
@@ -861,126 +1213,6 @@ module.exports = {
     allowed_origins: ['https://yourfrontend.com'],
     allowed_headers: ['Content-Type', 'Authorization'],
 };</code></pre>
-        </section>
-
-        <!-- ADVANCED -->
-        <section id="artisan">
-            <h2>Artisan CLI</h2>
-            <p>Artisan is the command-line interface included with LaraNode. It provides a number of helpful commands that can assist you while you build your application. You can run any command using <code>node artisan</code>.</p>
-
-            <h3>Development</h3>
-            <pre><code># Start the development server
-node artisan serve
-
-# List all registered routes
-node artisan route:list</code></pre>
-
-            <h3>Make Commands (Code Generators)</h3>
-            <p>Generate boilerplate files for your application with the <code>make</code> commands.</p>
-            <pre><code># Generate a controller
-node artisan make:controller UserController
-
-# Generate a model
-node artisan make:model Post
-
-# Generate middleware
-node artisan make:middleware EnsureAdmin
-
-# Generate a migration
-node artisan make:migration create_posts_table
-
-# Generate a database seeder
-node artisan make:seeder UserSeeder
-
-# Generate a form request
-node artisan make:request StorePostRequest
-
-# Generate an API resource
-node artisan make:resource UserResource
-
-# Generate a custom artisan command
-node artisan make:command SendEmails
-
-# Generate a validation rule
-node artisan make:rule Uppercase</code></pre>
-
-            <h3>Database Commands</h3>
-            <pre><code># Run pending migrations
-node artisan migrate
-
-# Rollback the last batch of migrations
-node artisan migrate:rollback
-
-# Drop all tables and re-run all migrations
-node artisan migrate:fresh
-
-# Seed the database
-node artisan db:seed</code></pre>
-
-            <h3>Queue &amp; Scheduling</h3>
-            <pre><code># Process queued jobs
-node artisan queue:work
-
-# Run scheduled tasks
-node artisan schedule:run</code></pre>
-
-            <h3>Custom Commands</h3>
-            <p>Create your own commands in <code>app/Console/Commands/</code>. They are automatically registered when placed in that directory.</p>
-            <pre><code>// app/Console/Commands/SendEmails.js
-const Command = use('laranode/Foundation/Console/Command');
-
-class SendEmails extends Command {
-    get signature() {
-        return 'emails:send';
-    }
-
-    get description() {
-        return 'Send queued emails to all users';
-    }
-
-    async handle() {
-        this.info('Sending emails...');
-        // Your logic here
-        this.info('Done!');
-    }
-}
-
-module.exports = SendEmails;</code></pre>
-        </section>
-
-        <section id="http-client">
-            <h2>HTTP Client &amp; Macros</h2>
-            <p>LaraNode features an expressive HTTP client powered by native <code>fetch</code>, accessible via the <code>Http</code> Facade. It provides a fluent API for making HTTP requests to external services.</p>
-
-            <h3>Making Requests</h3>
-            <pre><code>const Http = use('laranode/Support/Facades/Http');
-
-// Basic requests
-const response = await Http.get('https://api.github.com/users/octocat');
-const data = await Http.post('https://api.example.com/users', { name: 'John' });
-
-// Fluent configuration
-await Http.withHeaders({ 'X-Custom': '123' })
-    .withToken('super-secret-token')
-    .acceptJson()
-    .get('/endpoint');
-
-// File uploads (multipart/form-data)
-await Http.attach('avatar', fileBuffer, 'image.png')
-    .post('/upload');</code></pre>
-
-            <h3>HTTP Macros</h3>
-            <p>Register reusable HTTP client configurations as macros in your <code>AppServiceProvider</code>, then use them anywhere — controllers, services, artisan commands, etc.</p>
-            <pre><code>// app/Providers/AppServiceProvider.js
-boot() {
-    Http.macro('github', function () {
-        return this.withBaseUrl('https://api.github.com')
-            .withHeaders({ 'Accept': 'application/vnd.github.v3+json' });
-    });
-}
-
-// In your controller or service
-const response = await Http.github().get('/users/Sabbir1993');</code></pre>
         </section>
 
         <section id="events">
@@ -1166,6 +1398,463 @@ await user.notify(new InvoicePaid(invoice));</code></pre>
 }</code></pre>
         </section>
 
+        <!-- ============================================================ -->
+        <!-- LOGGING -->
+        <!-- ============================================================ -->
+        <section id="logging">
+            <h2>Logging</h2>
+            <p>LaraNode's logging system supports multiple drivers and channels, so you can route log messages to files, daily rotating files, Slack, or multiple channels simultaneously.</p>
+
+            <h3>Configuration</h3>
+            <pre><code>// config/logging.js
+module.exports = {
+    default: env('LOG_CHANNEL', 'stack'),
+    level:   env('LOG_LEVEL', 'debug'),
+
+    channels: {
+        // Write to a single file
+        single: {
+            driver: 'single',
+            path: storage_path('logs/app.log'),
+            level: 'debug',
+        },
+
+        // Rotate daily, keep 14 days
+        daily: {
+            driver: 'daily',
+            path: storage_path('logs/app.log'),
+            level: 'debug',
+            days: 14,
+        },
+
+        // Send critical errors to Slack
+        slack: {
+            driver: 'slack',
+            url: env('LOG_SLACK_WEBHOOK_URL'),
+            username: 'LaraNode',
+            emoji: ':boom:',
+            level: 'critical',
+        },
+
+        // Fan out to multiple channels
+        stack: {
+            driver: 'stack',
+            channels: ['single', 'daily'],
+            ignore_exceptions: false,
+        },
+    },
+};</code></pre>
+
+            <h3>Basic Logging</h3>
+            <pre><code>const Log = use('laranode/Support/Facades/Log');
+
+Log.debug('Debug info', { query: sql });
+Log.info('User logged in', { userId: user.id });
+Log.notice('New registration');
+Log.warning('Disk space low', { used: '90%' });
+Log.error('Payment failed', { orderId, error: err.message });
+Log.critical('Database down');
+Log.alert('Security breach detected');
+Log.emergency('System unusable');</code></pre>
+
+            <h3>Contextual Logging</h3>
+            <p>Add persistent context to all log messages in a request:</p>
+            <pre><code>Log.withContext({
+    requestId: req.id,
+    userId: req.user?.id,
+    ip: req.ip,
+});
+
+Log.info('Action started');   // includes requestId, userId, ip automatically
+Log.info('Action completed'); // same context</code></pre>
+
+            <h3>Channel-Specific Logging</h3>
+            <pre><code>// Log to a specific channel
+Log.channel('slack').critical('Production error', { error: err });
+
+// Log to daily file only
+Log.channel('daily').info('Batch job completed', { processed: 1000 });</code></pre>
+
+            <h3>Logging in Controllers</h3>
+            <pre><code>class PaymentController extends Controller {
+    async checkout(req, res) {
+        Log.info('Checkout started', { userId: req.user.id, amount });
+
+        try {
+            const payment = await PaymentService.charge(req.user, amount);
+
+            Log.info('Payment successful', {
+                userId: req.user.id,
+                paymentId: payment.id,
+                amount: payment.amount,
+            });
+
+            return res.json({ success: true });
+        } catch (error) {
+            Log.error('Payment failed', {
+                userId: req.user.id,
+                error: error.message,
+                amount,
+            });
+
+            throw error;
+        }
+    }
+}</code></pre>
+
+            <table>
+                <thead><tr><th>Level</th><th>Priority</th><th>Use When</th></tr></thead>
+                <tbody>
+                    <tr><td><code>debug</code></td><td>100</td><td>Development diagnostics</td></tr>
+                    <tr><td><code>info</code></td><td>200</td><td>Normal operations (logins, orders)</td></tr>
+                    <tr><td><code>notice</code></td><td>250</td><td>Notable but expected events</td></tr>
+                    <tr><td><code>warning</code></td><td>300</td><td>Non-critical issues, slow queries</td></tr>
+                    <tr><td><code>error</code></td><td>400</td><td>Errors that need investigation</td></tr>
+                    <tr><td><code>critical</code></td><td>500</td><td>Critical failures, send alert</td></tr>
+                    <tr><td><code>alert</code></td><td>550</td><td>Must be acted on immediately</td></tr>
+                    <tr><td><code>emergency</code></td><td>600</td><td>System is unusable</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- LOG VIEWER -->
+        <!-- ============================================================ -->
+        <section id="log-viewer">
+            <h2>Log Viewer</h2>
+            <p>LaraNode ships with a built-in web-based log viewer accessible at <code>/logs</code>. It provides real-time log viewing, severity filtering, and expandable stack traces — no extra packages needed.</p>
+
+            <h3>Enable Log Viewer</h3>
+            <pre><code>// config/logging.js
+module.exports = {
+    allow_log_viewer: env('LOG_VIEWER_ENABLED', true),
+
+    log_viewer: {
+        middleware: ['web', 'auth'],   // Protect with auth
+        endpoint: '/logs',              // URL: yourapp.com/logs
+        max_file_size: 52428800,       // Max 50MB file
+    },
+};</code></pre>
+
+            <div class="info-box">Visit <strong>http://localhost:3333/logs</strong> to open the log viewer. Requires <code>auth</code> middleware by default.</div>
+
+            <h3>Log Viewer Features</h3>
+            <table>
+                <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td>File Browser</td><td>Sidebar listing all log files with sizes and dates</td></tr>
+                    <tr><td>Severity Filter</td><td>Filter by Error, Warning, Info, Debug — or show All</td></tr>
+                    <tr><td>Expandable Rows</td><td>Click any log entry to expand the full context and stack trace</td></tr>
+                    <tr><td>Pagination</td><td>Chunk-based pagination handles large log files efficiently</td></tr>
+                    <tr><td>Real-time Display</td><td>Shows the most recent log entries first</td></tr>
+                    <tr><td>Log Rotation</td><td>Access historical daily logs from the file browser</td></tr>
+                </tbody>
+            </table>
+
+            <h3>Log Viewer Layout</h3>
+            <pre><code>http://yourapp.com/logs
+├── Sidebar (File Browser)
+│   ├── storage/logs/app.log       ← current
+│   ├── storage/logs/app-2026-04-23.log
+│   └── storage/logs/app-2026-04-22.log
+│
+├── Filter Bar  [ All | Error | Warning | Info | Debug ]
+│
+└── Log Entries
+    ├── [ERROR] 2026-04-24 10:30:45
+    │   Message: Database connection failed
+    │   Context: { "database": "mysql", "error": "timeout" }
+    │   Stack: [click to expand]
+    │
+    ├── [WARNING] 2026-04-24 10:25:30
+    │   Message: Slow query detected (512ms)
+    │
+    └── [INFO] 2026-04-24 10:20:15
+        Message: User login successful — userId: 42</code></pre>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- EXCEPTION HANDLING -->
+        <!-- ============================================================ -->
+        <section id="exceptions">
+            <h2>Exception Handling</h2>
+            <p>All exceptions are routed through <code>app/Exceptions/Handler.js</code>. You can register custom renderers and reporters there to control how errors are displayed and logged.</p>
+
+            <h3>The Handler</h3>
+            <pre><code>// app/Exceptions/Handler.js
+const BaseHandler = use('laranode/Foundation/Exceptions/Handler');
+
+class Handler extends BaseHandler {
+    constructor(app) {
+        super(app);
+
+        // These exceptions are NEVER reported/logged
+        this.dontReport = [
+            'ValidationError',
+            'AuthenticationException',
+        ];
+    }
+
+    register() {
+        // Custom renderer
+        this.renderable((error, req, res) => {
+            if (error.name === 'PaymentException') {
+                return res.status(402).json({
+                    error: 'Payment Failed',
+                    code: error.code,
+                    message: error.message,
+                });
+            }
+        });
+
+        // Custom reporter (send to Sentry, Datadog, etc.)
+        this.reportable((error) => {
+            if (env('SENTRY_DSN')) {
+                Sentry.captureException(error);
+            }
+        });
+    }
+}
+
+module.exports = Handler;</code></pre>
+
+            <h3>HTTP Exceptions</h3>
+            <pre><code">// Throw HTTP exceptions directly from controllers
+throw new NotFoundHttpException('Post not found');      // 404
+throw new ForbiddenHttpException('Unauthorized');        // 403
+throw new HttpException('Bad request', 400);             // any status
+
+// findOrFail automatically throws 404 if not found
+const post = await Post.findOrFail(req.params.id);</code></pre>
+
+            <h3>Custom Exceptions</h3>
+            <pre><code>// app/Exceptions/PaymentException.js
+class PaymentException extends Error {
+    constructor(message = 'Payment failed', code = 'PAYMENT_ERROR') {
+        super(message);
+        this.name = 'PaymentException';
+        this.code = code;
+        this.status = 422;
+        this.shouldReport = true;
+    }
+}
+
+module.exports = PaymentException;
+
+// Usage
+const PaymentException = use('App/Exceptions/PaymentException');
+
+try {
+    await chargeCard(data);
+} catch (error) {
+    throw new PaymentException('Card declined', 'CARD_DECLINED');
+}</code></pre>
+
+            <h3>Handling in Controllers</h3>
+            <pre><code>async checkout(req, res) {
+    try {
+        const order = await OrderService.createOrder(req.user, req.all());
+        return res.json({ success: true, order });
+    } catch (error) {
+        // Handle known error types explicitly
+        if (error.name === 'InsufficientBalanceException') {
+            return res.status(422).json({
+                error: 'Insufficient balance',
+                available: error.available,
+                required: error.required,
+            });
+        }
+        // Re-throw unknown errors to global handler
+        throw error;
+    }
+}</code></pre>
+
+            <h3>Error Response Format</h3>
+            <pre><code>// Development (APP_DEBUG=true)
+{
+    "error": "Server Error",
+    "message": "ENOENT: no such file",
+    "exception": "Error",
+    "file": "/app/Services/FileService.js",
+    "line": 45,
+    "stack": "Error: ENOENT: ..."
+}
+
+// Production (APP_DEBUG=false)
+{
+    "error": "Internal Server Error",
+    "message": "An error occurred while processing your request"
+}</code></pre>
+
+            <table>
+                <thead><tr><th>Exception</th><th>Status</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>NotFoundHttpException</code></td><td>404</td><td>Resource not found</td></tr>
+                    <tr><td><code>ForbiddenHttpException</code></td><td>403</td><td>Authenticated but no permission</td></tr>
+                    <tr><td><code>AuthenticationException</code></td><td>401</td><td>Not authenticated</td></tr>
+                    <tr><td><code>ValidationError</code></td><td>422</td><td>Input validation failed</td></tr>
+                    <tr><td><code>HttpException</code></td><td>any</td><td>Generic HTTP exception with code</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ADVANCED -->
+        <section id="artisan">
+            <h2>Artisan CLI</h2>
+            <p>Artisan is the command-line interface included with LaraNode. It provides a number of helpful commands that can assist you while you build your application. You can run any command using <code>node artisan</code>.</p>
+
+            <h3>Development</h3>
+            <pre><code># Start the development server
+node artisan serve
+
+# List all registered routes
+node artisan route:list</code></pre>
+
+            <h3>Make Commands (Code Generators)</h3>
+            <p>Generate boilerplate files for your application with the <code>make</code> commands.</p>
+            <pre><code># Generate a controller
+node artisan make:controller UserController
+
+# Generate a model
+node artisan make:model Post
+
+# Generate middleware
+node artisan make:middleware EnsureAdmin
+
+# Generate a migration
+node artisan make:migration create_posts_table
+
+# Generate a database seeder
+node artisan make:seeder UserSeeder
+
+# Generate a form request
+node artisan make:request StorePostRequest
+
+# Generate an API resource
+node artisan make:resource UserResource
+
+# Generate a custom artisan command
+node artisan make:command SendEmails
+
+# Generate a validation rule
+node artisan make:rule Uppercase</code></pre>
+
+            <h3>Database Commands</h3>
+            <pre><code># Run pending migrations
+node artisan migrate
+
+# Rollback the last batch of migrations
+node artisan migrate:rollback
+
+# Drop all tables and re-run all migrations
+node artisan migrate:fresh
+
+# Seed the database
+node artisan db:seed</code></pre>
+
+            <h3>Queue &amp; Scheduling</h3>
+            <pre><code># Process queued jobs
+node artisan queue:work
+
+# Run scheduled tasks
+node artisan schedule:run</code></pre>
+
+            <h3>Custom Commands</h3>
+            <p>Create your own commands in <code>app/Console/Commands/</code>. They are automatically registered when placed in that directory.</p>
+            <pre><code>// app/Console/Commands/SendEmails.js
+const Command = use('laranode/Foundation/Console/Command');
+
+class SendEmails extends Command {
+    get signature() {
+        return 'emails:send';
+    }
+
+    get description() {
+        return 'Send queued emails to all users';
+    }
+
+    async handle() {
+        this.info('Sending emails...');
+        // Your logic here
+        this.info('Done!');
+    }
+}
+
+module.exports = SendEmails;</code></pre>
+        </section>
+
+        <!-- ============================================================ -->
+        <!-- TINKER -->
+        <!-- ============================================================ -->
+        <section id="tinker">
+            <h2>Tinker — Interactive REPL</h2>
+            <p>Tinker is an interactive Node.js REPL that boots your entire application — including all models, facades, and helpers — so you can explore, debug, and prototype directly in the terminal.</p>
+
+            <pre><code>node artisan tinker</code></pre>
+
+            <div class="tip-box">
+                <strong>Top-level <code>await</code> is supported.</strong> All models from <code>app/Models/</code> are auto-loaded. Facades like <code>DB</code>, <code>Cache</code>, <code>Hash</code>, <code>Log</code>, and global helpers like <code>config()</code>, <code>env()</code> are available globally.
+            </div>
+
+            <h3>Example Session</h3>
+            <pre><code>$ node artisan tinker
+LaraNode Tinker v1.0 — Type .exit to quit
+
+# Query models directly
+>>> await User.first()
+User { id: 1, name: 'John Doe', email: 'john@example.com', ... }
+
+# Count records
+>>> await User.count()
+42
+
+>>> await User.where('role', 'admin').count()
+3
+
+# Create a record
+>>> await User.create({ name: 'Jane', email: 'jane@test.com', password: await Hash.make('secret') })
+User { id: 43, name: 'Jane', ... }
+
+# Use the DB facade
+>>> await DB.table('users').select('role').groupBy('role').get()
+[{ role: 'admin' }, { role: 'user' }, { role: 'author' }]
+
+# Check environment
+>>> env('APP_ENV')
+'local'
+
+>>> config('app.name')
+'LaraNode'
+
+# Inspect a relationship
+>>> const user = await User.with('posts').find(1)
+>>> user.posts.length
+5
+
+# Hash a password
+>>> await Hash.make('my-password')
+'$2b$10$...'
+
+# Use Cache
+>>> await Cache.put('test', 'hello', 60)
+>>> await Cache.get('test')
+'hello'</code></pre>
+
+            <h3>Useful Tinker Commands</h3>
+            <table>
+                <thead><tr><th>Command</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>.exit</code></td><td>Exit the REPL</td></tr>
+                    <tr><td><code>.clear</code></td><td>Clear the REPL context</td></tr>
+                    <tr><td><code>.help</code></td><td>Show REPL commands</td></tr>
+                    <tr><td><code>await Model.first()</code></td><td>Query first record</td></tr>
+                    <tr><td><code>await Model.count()</code></td><td>Count records</td></tr>
+                    <tr><td><code>await Model.all()</code></td><td>Fetch all records</td></tr>
+                    <tr><td><code>await DB.table('name').get()</code></td><td>Raw query builder</td></tr>
+                </tbody>
+            </table>
+        </section>
+
         <section id="testing">
             <h2>Testing</h2>
             <p>LaraNode provides a robust testing framework inspired by Laravel. It supports <code>artisan test</code> and provides a <code>TestCase</code> class for building expressive feature tests.</p>
@@ -1219,6 +1908,41 @@ node artisan route:cache
 node artisan route:clear</code></pre>
         </section>
 
+        <section id="http-client">
+            <h2>HTTP Client &amp; Macros</h2>
+            <p>LaraNode features an expressive HTTP client powered by native <code>fetch</code>, accessible via the <code>Http</code> Facade. It provides a fluent API for making HTTP requests to external services.</p>
+
+            <h3>Making Requests</h3>
+            <pre><code>const Http = use('laranode/Support/Facades/Http');
+
+// Basic requests
+const response = await Http.get('https://api.github.com/users/octocat');
+const data = await Http.post('https://api.example.com/users', { name: 'John' });
+
+// Fluent configuration
+await Http.withHeaders({ 'X-Custom': '123' })
+    .withToken('super-secret-token')
+    .acceptJson()
+    .get('/endpoint');
+
+// File uploads (multipart/form-data)
+await Http.attach('avatar', fileBuffer, 'image.png')
+    .post('/upload');</code></pre>
+
+            <h3>HTTP Macros</h3>
+            <p>Register reusable HTTP client configurations as macros in your <code>AppServiceProvider</code>, then use them anywhere — controllers, services, artisan commands, etc.</p>
+            <pre><code>// app/Providers/AppServiceProvider.js
+boot() {
+    Http.macro('github', function () {
+        return this.withBaseUrl('https://api.github.com')
+            .withHeaders({ 'Accept': 'application/vnd.github.v3+json' });
+    });
+}
+
+// In your controller or service
+const response = await Http.github().get('/users/Sabbir1993');</code></pre>
+        </section>
+
         <section id="process">
             <h2>The Lifecycle</h2>
             <p>Understanding the LaraNode request lifecycle is key to building complex applications.</p>
@@ -1237,25 +1961,37 @@ node artisan route:clear</code></pre>
     </main>
 
     <script>
-        // Simple scroll spy for active nav links
-        window.addEventListener('scroll', () => {
-            const sections = document.querySelectorAll('section');
-            const navLinks = document.querySelectorAll('nav a');
-            
-            let current = '';
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                if (scrollY >= sectionTop - 150) {
-                    current = section.getAttribute('id');
-                }
-            });
+        // Scroll spy for active nav links
+        const sections  = document.querySelectorAll('section[id]');
+        const navLinks  = document.querySelectorAll('nav a');
 
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('href') === `#${current}`) {
-                    link.classList.add('active');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === '#' + entry.target.id) {
+                            link.classList.add('active');
+                            // Scroll sidebar link into view
+                            link.scrollIntoView({ block: 'nearest' });
+                        }
+                    });
                 }
             });
+        }, { rootMargin: '-10% 0px -80% 0px' });
+
+        sections.forEach(s => observer.observe(s));
+
+        // Sidebar search — filters nav links by text
+        const searchInput = document.getElementById('doc-search');
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.toLowerCase().trim();
+            navLinks.forEach(link => {
+                const show = !q || link.textContent.toLowerCase().includes(q);
+                link.parentElement.style.display = show ? '' : 'none';
+            });
+            // Show all group headers if no query
+            document.querySelectorAll('nav h3').forEach(h => h.style.display = q ? 'none' : '');
         });
     </script>
 </body>
