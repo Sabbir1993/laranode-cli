@@ -24,8 +24,7 @@ class EncryptionServiceProvider {
             const key = config.get('app.key');
 
             if (!key) {
-                console.warn('Warning: No APP_KEY configured. Encryption will not work properly.');
-                return encryption;
+                throw new Error('APP_KEY is not set. Run `node artisan key:generate` — it is required for encryption.');
             }
 
             // Handle base64 encoded keys (Laravel format)

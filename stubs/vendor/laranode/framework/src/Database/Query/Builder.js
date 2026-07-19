@@ -466,10 +466,23 @@ class Builder {
                 columns = parts[1].split(',');
             }
 
-            // Instantiate a dummy model to access the relation method
+            // Instantiate a dummy model to access the relation method / metadata.
             const dummy = new this.model();
             if (typeof dummy[name] !== 'function') continue;
 
+            // Batch the common key-based relations into a single whereIn query
+            // (one query for the whole set instead of one per parent — the N+1).
+            const meta = dummy[name]()._relation;
+            if (meta && (meta.type === 'hasMany' || meta.type === 'hasOne')) {
+                await this.model._eagerLoadHasRelation(models, name, meta, { columns, callback, nested });
+                continue;
+            }
+            if (meta && meta.type === 'belongsTo') {
+                await this.model._eagerLoadBelongsTo(models, name, meta, { columns, callback, nested });
+                continue;
+            }
+
+            // Fallback: pivot / through / polymorphic relations load per-model.
             for (const model of models) {
                 // Re-bind the local key / foreign key using the actual model instance
                 const specificBuilder = model[name]();

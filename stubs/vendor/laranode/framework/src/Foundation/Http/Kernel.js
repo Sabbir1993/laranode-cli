@@ -102,7 +102,12 @@ class Kernel {
         this.expressApp.use(session({
             store: sessionStore,
             name: sessionConfig.cookie || 'laranode_session',
-            secret: process.env.APP_KEY || 'laranode_secret_key',
+            secret: (() => {
+                if (!process.env.APP_KEY) {
+                    throw new Error('APP_KEY is not set. Run `node artisan key:generate` — it is required to sign sessions.');
+                }
+                return process.env.APP_KEY;
+            })(),
             resave: false,
             saveUninitialized: true,
             cookie: {

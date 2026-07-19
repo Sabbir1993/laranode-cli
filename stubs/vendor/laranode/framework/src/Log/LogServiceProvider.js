@@ -33,6 +33,14 @@ class LogServiceProvider extends ServiceProvider {
             const endpoint = config.get('logging.log_viewer.endpoint', '/logs');
             const middleware = config.get('logging.log_viewer.middleware', []);
 
+            // The viewer exposes raw logs and destructive delete/clear endpoints.
+            // Refuse to register it without auth middleware outside local development.
+            const env = config.get('app.env', process.env.APP_ENV);
+            if ((!middleware || middleware.length === 0) && env !== 'local') {
+                console.error('[SECURITY] Log viewer is enabled with no auth middleware; refusing to register routes outside local env.');
+                return;
+            }
+
             const groupOptions = {};
             if (middleware && middleware.length > 0) {
                 groupOptions.middleware = middleware;

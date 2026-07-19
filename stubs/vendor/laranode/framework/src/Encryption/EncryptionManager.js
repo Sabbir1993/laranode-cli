@@ -9,7 +9,7 @@ const crypto = require('crypto');
 
 class EncryptionManager {
     constructor() {
-        this.cipher = 'aes-256-cbc';
+        this.cipher = 'aes-256-gcm';
         this.key = null;
         this.driver = 'native';
     }
@@ -57,21 +57,21 @@ class EncryptionManager {
             throw new Error('Encryption key not set. Please configure APP_KEY.');
         }
 
-        // Generate a random initialization vector (IV)
-        const iv = crypto.randomBytes(16);
+        // Generate a random 96-bit nonce (recommended IV size for GCM)
+        const iv = crypto.randomBytes(12);
 
-        // Create cipher
+        // Create authenticated cipher
         const cipher = crypto.createCipheriv(this.cipher, this.key, iv);
 
         // Encrypt the value
         let encrypted = cipher.update(value, 'utf8', 'base64');
         encrypted += cipher.final('base64');
 
-        // Combine IV and encrypted data
-        // Format: base64(iv):base64(encrypted)
-        const combined = iv.toString('base64') + ':' + encrypted;
+        // Authentication tag protects integrity of IV + ciphertext
+        const tag = cipher.getAuthTag().toString('base64');
 
-        return combined;
+        // Format: base64(iv):base64(tag):base64(ciphertext)
+        return iv.toString('base64') + ':' + tag + ':' + encrypted;
     }
 
     /**
@@ -86,19 +86,19 @@ class EncryptionManager {
         }
 
         try {
-            // Split IV and encrypted data
+            // Format: base64(iv):base64(tag):base64(ciphertext)
             const parts = encryptedValue.split(':');
-            if (parts.length !== 2) {
+            if (parts.length !== 3) {
                 throw new Error('Invalid encrypted value format.');
             }
 
             const iv = Buffer.from(parts[0], 'base64');
-            const encrypted = parts[1];
+            const tag = Buffer.from(parts[1], 'base64');
+            const encrypted = parts[2];
 
-            // Create decipher
             const decipher = crypto.createDecipheriv(this.cipher, this.key, iv);
+            decipher.setAuthTag(tag); // final() throws if IV/ciphertext were tampered with
 
-            // Decrypt
             let decrypted = decipher.update(encrypted, 'base64', 'utf8');
             decrypted += decipher.final('utf8');
 

@@ -6,6 +6,7 @@ class Validator {
      */
     static customRules = {};
     static customMessages = {};
+    static EXCLUDE_RULES = ['exclude', 'exclude_if', 'exclude_unless', 'exclude_with', 'exclude_without'];
 
     /**
      * Create a new Validator instance.
@@ -230,12 +231,8 @@ class Validator {
             before_or_equal: (value, date) => new Date(value) <= new Date(date),
             date_equals: (value, date) => new Date(value).toDateString() === new Date(date).toDateString(),
 
-            // ---- Exclusion rules (return true; actual exclusion is handled in validate()) ----
-            exclude: () => true,
-            exclude_if: (value, otherField, targetValue, { data }) => true,
-            exclude_unless: (value, otherField, targetValue, { data }) => true,
-            exclude_with: (value, otherField, { data }) => true,
-            exclude_without: (value, otherField, { data }) => true,
+            // Exclusion rules (exclude / exclude_if / …) are intercepted in validate()
+            // before rule dispatch — see Validator.EXCLUDE_RULES and shouldExclude().
 
             // ---- Prohibition extras ----
             prohibited: (value) => value === null || value === undefined || value === '',
@@ -464,6 +461,8 @@ class Validator {
     async validate() {
         if (this.hasRun) return !this._errors.isEmpty();
 
+        this._excluded = new Set();
+
         const explodedRules = {};
         for (const [attribute, ruleConfig] of Object.entries(this.rules)) {
             if (attribute.includes('*')) {
@@ -539,6 +538,23 @@ class Validator {
                     continue;
                 }
 
+                // sometimes: only run the remaining rules if the field is present.
+                if (rule === 'sometimes') {
+                    if (!Object.prototype.hasOwnProperty.call(this.data, attribute)) bail = true;
+                    continue;
+                }
+
+                // Exclusion rules: drop the field from the validated output when the
+                // condition holds. This is what actually enforces mass-assignment guards.
+                if (Validator.EXCLUDE_RULES.includes(rule)) {
+                    if (this.shouldExclude(rule, attribute, params)) {
+                        this._excluded.add(attribute);
+                        delete this.validatedData[attribute];
+                        bail = true;
+                    }
+                    continue;
+                }
+
                 // If it's empty, we only validate implicit rules
                 const isEmpty = value === undefined || value === null || value === '';
                 if (isEmpty && !this.implicitRules.includes(rule)) {
@@ -546,27 +562,54 @@ class Validator {
                 }
 
                 const customRuleFn = Validator.customRules[rule];
+                const ruleFn = this.standardRules[rule] || customRuleFn;
 
-                if (this.standardRules[rule] || customRuleFn) {
-                    const ruleFn = this.standardRules[rule] || customRuleFn;
-                    const passed = await ruleFn(value, ...params, { attribute, data: this.data });
-                    if (!passed) {
-                        this.addError(attribute, rule, params);
-                        // Implicit required rule or bail specifies stopping
-                        if (this.implicitRules.includes(rule) || rulesArray.includes('bail')) {
-                            bail = true;
-                        }
-                    } else {
-                        // If an implicit rule passes on an empty value, we still don't want to run other non-implicit rules on that empty value usually, 
-                        // unless it's 'sometimes'. Actually Laravel's behavior is: if it's empty and not required, we don't run other rules.
-                        // We handled this with the `continue` above for non-implicit rules when empty!
-                        this.validatedData[attribute] = value;
+                // Fail closed: an unrecognized rule name (typo, or a rule that was
+                // never registered) must be a hard error, never a silent pass.
+                if (!ruleFn) {
+                    throw new Error(`Unknown validation rule: [${rule}] on attribute [${attribute}].`);
+                }
+
+                const passed = await ruleFn(value, ...params, { attribute, data: this.data });
+                if (!passed) {
+                    this.addError(attribute, rule, params);
+                    // Implicit required rule or bail specifies stopping
+                    if (this.implicitRules.includes(rule) || rulesArray.includes('bail')) {
+                        bail = true;
                     }
+                } else if (!this._excluded.has(attribute)) {
+                    this.validatedData[attribute] = value;
                 }
             }
         }
 
+        // Ensure no excluded field survives, even if an earlier rule added it.
+        for (const attribute of this._excluded) {
+            delete this.validatedData[attribute];
+        }
+
         this.hasRun = true;
+    }
+
+    /**
+     * Determine whether an exclusion rule should drop the attribute.
+     */
+    shouldExclude(rule, attribute, params) {
+        const data = this.data;
+        switch (rule) {
+            case 'exclude':
+                return true;
+            case 'exclude_if':
+                return String(data[params[0]]) === String(params[1]);
+            case 'exclude_unless':
+                return String(data[params[0]]) !== String(params[1]);
+            case 'exclude_with':
+                return data[params[0]] !== undefined && data[params[0]] !== null && data[params[0]] !== '';
+            case 'exclude_without':
+                return data[params[0]] === undefined || data[params[0]] === null || data[params[0]] === '';
+            default:
+                return false;
+        }
     }
 
     /**

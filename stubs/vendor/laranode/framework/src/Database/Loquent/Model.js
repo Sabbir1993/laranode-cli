@@ -227,6 +227,8 @@ class Model {
 
         const builder = relatedClass.query().where(foreignKey, this.attributes[localKey]);
         builder.getResults = () => builder.first();
+        // Metadata lets the eager loader batch this relation with a single whereIn.
+        builder._relation = { type: 'hasOne', related: relatedClass, foreignKey, localKey };
         return builder;
     }
 
@@ -236,6 +238,7 @@ class Model {
 
         const builder = relatedClass.query().where(foreignKey, this.attributes[localKey]);
         builder.getResults = () => builder.get();
+        builder._relation = { type: 'hasMany', related: relatedClass, foreignKey, localKey };
         return builder;
     }
 
@@ -245,6 +248,7 @@ class Model {
 
         const builder = relatedClass.query().where(ownerKey, this.attributes[foreignKey]);
         builder.getResults = () => builder.first();
+        builder._relation = { type: 'belongsTo', related: relatedClass, foreignKey, ownerKey };
         return builder;
     }
 
@@ -707,6 +711,22 @@ class Model {
             return;
         }
 
+        // Introspect the relation once (building it runs no query) so we can
+        // batch-load the common key-based relations with a single whereIn
+        // instead of one query per parent model (the classic N+1).
+        const sample = models.find(m => typeof m[relationName] === 'function');
+        if (!sample) return;
+
+        const meta = sample[relationName]()._relation;
+
+        if (meta && (meta.type === 'hasMany' || meta.type === 'hasOne')) {
+            return this._eagerLoadHasRelation(models, relationName, meta, { columns });
+        }
+        if (meta && meta.type === 'belongsTo') {
+            return this._eagerLoadBelongsTo(models, relationName, meta, { columns });
+        }
+
+        // Fallback: pivot / through / polymorphic relations load per-model.
         for (const model of models) {
             if (typeof model[relationName] === 'function') {
                 const rel = model[relationName]();
@@ -724,6 +744,78 @@ class Model {
                     model.relations[relationName] = await rel.first();
                 }
             }
+        }
+    }
+
+    /**
+     * Batch-load a hasOne/hasMany relation for many parents in one query.
+     */
+    static async _eagerLoadHasRelation(models, relationName, meta, options = {}) {
+        const { columns = null, callback = null, nested = null } = options;
+        const { related, foreignKey, localKey } = meta;
+        const isMany = meta.type === 'hasMany';
+
+        const keys = [...new Set(
+            models.map(m => m.attributes[localKey]).filter(k => k !== null && k !== undefined)
+        )];
+
+        if (keys.length === 0) {
+            for (const m of models) m.relations[relationName] = isMany ? [] : null;
+            return;
+        }
+
+        const query = related.query().whereIn(foreignKey, keys);
+        if (columns && typeof query.select === 'function') query.select(...columns);
+        if (callback) callback(query);                                   // shared constraint
+        if (nested && typeof query.with === 'function') query.with(nested);
+        const results = await query.get();
+
+        // Group related rows by their foreign key (string-normalized to avoid
+        // number/string mismatches across DB drivers).
+        const grouped = new Map();
+        for (const row of results) {
+            const fk = row.attributes ? row.attributes[foreignKey] : row[foreignKey];
+            const gk = String(fk);
+            if (!grouped.has(gk)) grouped.set(gk, []);
+            grouped.get(gk).push(row);
+        }
+
+        for (const m of models) {
+            const matched = grouped.get(String(m.attributes[localKey])) || [];
+            m.relations[relationName] = isMany ? matched : (matched[0] || null);
+        }
+    }
+
+    /**
+     * Batch-load a belongsTo relation for many parents in one query.
+     */
+    static async _eagerLoadBelongsTo(models, relationName, meta, options = {}) {
+        const { columns = null, callback = null, nested = null } = options;
+        const { related, foreignKey, ownerKey } = meta;
+
+        const keys = [...new Set(
+            models.map(m => m.attributes[foreignKey]).filter(k => k !== null && k !== undefined)
+        )];
+
+        if (keys.length === 0) {
+            for (const m of models) m.relations[relationName] = null;
+            return;
+        }
+
+        const query = related.query().whereIn(ownerKey, keys);
+        if (columns && typeof query.select === 'function') query.select(...columns);
+        if (callback) callback(query);                                   // shared constraint
+        if (nested && typeof query.with === 'function') query.with(nested);
+        const results = await query.get();
+
+        const byKey = new Map();
+        for (const row of results) {
+            const ok = row.attributes ? row.attributes[ownerKey] : row[ownerKey];
+            byKey.set(String(ok), row);
+        }
+
+        for (const m of models) {
+            m.relations[relationName] = byKey.get(String(m.attributes[foreignKey])) || null;
         }
     }
 

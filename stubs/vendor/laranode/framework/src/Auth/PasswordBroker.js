@@ -59,7 +59,8 @@ class PasswordBroker {
         const token = crypto.randomBytes(64).toString('hex');
 
         // HMAC-SHA256 keyed with APP_KEY so DB-only compromise can't reverse tokens
-        const secret = process.env.APP_KEY || '';
+        const secret = process.env.APP_KEY;
+        if (!secret) throw new Error('APP_KEY is not set. It is required to issue password-reset tokens.');
         const hashedToken = crypto.createHmac('sha256', secret).update(token).digest('hex');
 
         // Delete any existing tokens for this user
@@ -89,7 +90,8 @@ class PasswordBroker {
         const Hash = use('laranode/Support/Facades/Hash');
 
         // HMAC-SHA256 keyed with APP_KEY (must match createResetToken)
-        const secret = process.env.APP_KEY || '';
+        const secret = process.env.APP_KEY;
+        if (!secret) throw new Error('APP_KEY is not set. It is required to verify password-reset tokens.');
         const hashedToken = crypto.createHmac('sha256', secret).update(token).digest('hex');
 
         // Find valid reset record

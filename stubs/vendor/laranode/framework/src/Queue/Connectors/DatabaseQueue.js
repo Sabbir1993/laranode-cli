@@ -5,6 +5,9 @@ class DatabaseQueue {
         this.app = app;
         this.table = config.table || 'jobs';
         this.defaultQueue = config.queue || 'default';
+        // Visibility timeout: a reserved job whose worker died is reclaimed after
+        // this many seconds. Must be longer than the longest job runtime.
+        this.retryAfter = config.retry_after || 90;
     }
 
     push(jobPath, data = '', queue = null) {
@@ -36,24 +39,49 @@ class DatabaseQueue {
         });
     }
 
+    /**
+     * Release jobs whose reservation has expired (crashed/killed workers) so
+     * they become available again. attempts is left intact so max-tries still
+     * bounds a job that repeatedly kills its worker.
+     */
+    async releaseExpired(queueName) {
+        const staleBefore = Math.floor(Date.now() / 1000) - this.retryAfter;
+        await DB.table(this.table)
+            .where('queue', queueName)
+            .whereNotNull('reserved_at')
+            .where('reserved_at', '<=', staleBefore)
+            .update({ reserved_at: null });
+    }
+
     async pop(queue = null) {
         const queueName = queue || this.defaultQueue;
 
-        const jobRecord = await DB.table(this.table)
-            .where('queue', queueName)
-            .whereNull('reserved_at')
-            .where('available_at', '<=', Math.floor(Date.now() / 1000))
-            .oldest('id')
-            .first();
+        // Reclaim jobs orphaned by dead workers before looking for new work.
+        await this.releaseExpired(queueName);
 
-        if (jobRecord) {
+        // Atomically claim a job: SELECT a candidate, then a conditional UPDATE
+        // that only succeeds if the row is still unreserved. Under concurrency
+        // only one worker's UPDATE affects the row; losers retry a few times.
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const jobRecord = await DB.table(this.table)
+                .where('queue', queueName)
+                .whereNull('reserved_at')
+                .where('available_at', '<=', Math.floor(Date.now() / 1000))
+                .oldest('id')
+                .first();
+
+            if (!jobRecord) return null;
+
             const now = Math.floor(Date.now() / 1000);
-            await DB.table(this.table)
+            const claimed = await DB.table(this.table)
                 .where('id', jobRecord.id)
-                .update({
-                    reserved_at: now,
-                    attempts: jobRecord.attempts + 1
-                });
+                .whereNull('reserved_at')
+                .update({ reserved_at: now, attempts: jobRecord.attempts + 1 });
+
+            if (claimed !== 1) {
+                // Another worker won the race for this row; try the next candidate.
+                continue;
+            }
 
             return {
                 id: jobRecord.id,
@@ -63,8 +91,12 @@ class DatabaseQueue {
                 delete: async () => {
                     await DB.table(this.table).where('id', jobRecord.id).delete();
                 },
-                release: async () => {
-                    await DB.table(this.table).where('id', jobRecord.id).update({ reserved_at: null });
+                // Release back to the queue, optionally after a backoff delay.
+                release: async (delay = 0) => {
+                    const availableAt = Math.floor(Date.now() / 1000) + delay;
+                    await DB.table(this.table)
+                        .where('id', jobRecord.id)
+                        .update({ reserved_at: null, available_at: availableAt });
                 }
             };
         }

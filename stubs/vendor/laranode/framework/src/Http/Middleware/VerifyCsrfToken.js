@@ -34,21 +34,17 @@ class VerifyCsrfToken {
             return next(context);
         }
 
-        // Get token from multiple sources:
-        // 1. Request body (_token)
-        // 2. Request header (x-csrf-token or x-xsrf-token)
-        // 3. Cookie (XSRF-TOKEN)
-        let token = req.body?._token || req.headers['x-csrf-token'] || req.headers['x-xsrf-token'];
+        // Token must come from the request body (_token) or a header.
+        // The XSRF-TOKEN cookie is NOT accepted as the submitted token: it is
+        // auto-sent by the browser, so comparing it to the session proves nothing.
+        const token = req.body?._token || req.headers['x-csrf-token'] || req.headers['x-xsrf-token'];
 
-        // Use cookie-parser's parsed cookies (req.cookies) if available,
-        // falling back to a safe manual parse with proper decoding.
-        if (!token) {
-            const parsed = req.cookies || {};
-            token = parsed['XSRF-TOKEN'] || null;
-        }
+        const crypto = require('crypto');
+        const valid = sessionToken && token &&
+            token.length === sessionToken.length &&
+            crypto.timingSafeEqual(Buffer.from(token), Buffer.from(sessionToken));
 
-        if (!sessionToken || token !== sessionToken) {
-            console.log('[CSRF] Token mismatch!', { sessionToken, token });
+        if (!valid) {
             const error = new Error('TokenMismatchException: CSRF token mismatch.');
             error.status = 419;
             throw error;

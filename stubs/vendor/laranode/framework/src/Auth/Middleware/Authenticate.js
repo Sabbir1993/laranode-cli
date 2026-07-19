@@ -64,7 +64,7 @@ class Authenticate {
             }
             // Session Authentication
             else {
-                if (authGuard.check()) {
+                if (await authGuard.check()) {
                     req.user = () => authGuard.user();
                     return next(context);
                 }

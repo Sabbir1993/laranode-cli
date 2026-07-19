@@ -83,9 +83,11 @@ function SoftDeletes(Base) {
 
         /**
          * Query scope: include soft-deleted records.
+         * Uses super.query() to bypass this mixin's deleted_at filter while
+         * still applying any other global scopes on the base model.
          */
         static withTrashed() {
-            return this.query(); // No deleted_at filter
+            return super.query();
         }
 
         /**
@@ -93,7 +95,7 @@ function SoftDeletes(Base) {
          */
         static onlyTrashed() {
             const deletedAtColumn = this.DELETED_AT || 'deleted_at';
-            return this.query().whereNotNull(deletedAtColumn);
+            return super.query().whereNotNull(deletedAtColumn);
         }
 
         /**
