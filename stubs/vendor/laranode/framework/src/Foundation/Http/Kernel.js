@@ -63,7 +63,14 @@ class Kernel {
         this.expressApp.use(express.static(process.cwd() + '/public'));
         this.expressApp.use(express.json());
         this.expressApp.use(express.urlencoded({ extended: true }));
+        // express-fileupload must run BEFORE method-override so that multipart/form-data
+        // bodies (including _method=PUT) are parsed before method-override reads req.body.
+        this.expressApp.use(fileUpload({
+            createParentPath: true, // Automatically creates directories if they don't exist
+            limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max limit
+        }));
         // Method override: allows HTML forms to submit PUT/PATCH/DELETE via _method body field
+        // Also supports ?_method=PUT in query string as fallback.
         const methodOverride = require('method-override');
         this.expressApp.use(methodOverride((req) => {
             if (req.body && req.body._method) {
@@ -71,10 +78,10 @@ class Kernel {
                 delete req.body._method;
                 return method;
             }
-        }));
-        this.expressApp.use(fileUpload({
-            createParentPath: true, // Automatically creates directories if they don't exist
-            limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max limit
+            // Fallback: support ?_method=PUT in query string (useful for multipart edge cases)
+            if (req.query && req.query._method) {
+                return req.query._method;
+            }
         }));
 
         const config = this.app.make('config');
