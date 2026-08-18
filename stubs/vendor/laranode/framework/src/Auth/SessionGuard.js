@@ -4,8 +4,6 @@ class SessionGuard {
     constructor(name, provider) {
         this.name = name;
         this.provider = provider;
-        this.userObj = null;
-        this.loggedOut = false;
     }
 
     /**
@@ -17,6 +15,29 @@ class SessionGuard {
     getName() {
         const crypto = require('crypto');
         return 'login_' + this.name + '_' + crypto.createHash('sha256').update(this.name + '_guard').digest('hex');
+    }
+
+    /**
+     * Property name used to cache the resolved user on the current request.
+     *
+     * IMPORTANT: this guard instance is a process-wide singleton (AuthManager
+     * caches one instance per guard name and reuses it for the lifetime of
+     * the Node process — see AuthManager.guard()). It must never cache
+     * per-user state like the resolved user or logged-out flag on `this`,
+     * or every concurrent request/device would share whichever user last
+     * logged in or out on the server. The only safe place to cache
+     * request-scoped data is the actual Express `req` object, which Express
+     * creates fresh for every incoming HTTP request.
+     *
+     * @return {string}
+     */
+    _cacheKey() {
+        return '__auth_' + this.name;
+    }
+
+    _expressReq() {
+        const req = request();
+        return req ? req.getExpressRequest() : null;
     }
 
     /**
@@ -45,9 +66,6 @@ class SessionGuard {
      * @return {Promise<void>}
      */
     async login(user, remember = false) {
-        this.userObj = user;
-        this.loggedOut = false;
-
         const req = request();
         if (!req) return;
 
@@ -58,18 +76,21 @@ class SessionGuard {
         if (expressReq && expressReq.session && typeof expressReq.session.regenerate === 'function') {
             await new Promise((resolve) => expressReq.session.regenerate(() => resolve()));
             // After regeneration, we MUST re-fetch the session from the request because it's a new object
-            session = req.session; 
+            session = req.session;
         }
 
         // 2. Persist user ID to session using the framework's Request.session proxy
         session.put(this.getName(), user.id);
 
-        // 3. Force save the underlying Express session if the store doesn't do it automatically
+        // 3. Cache the resolved user for the remainder of THIS request only.
+        if (expressReq) expressReq[this._cacheKey()] = { user, loggedOut: false };
+
+        // 4. Force save the underlying Express session if the store doesn't do it automatically
         if (expressReq && expressReq.session && typeof expressReq.session.save === 'function') {
             await new Promise((resolve) => expressReq.session.save(() => resolve()));
         }
 
-        // 4. Handle "Remember Me" if requested
+        // 5. Handle "Remember Me" if requested
         if (remember) {
             const crypto = require('crypto');
             const res = response();
@@ -99,16 +120,16 @@ class SessionGuard {
      * @return {Promise<void>}
      */
     async logout() {
-        this.userObj = null;
-        this.loggedOut = true;
-
         const req = request();
         if (!req) return;
+
+        const expressReq = req.getExpressRequest();
+        // Mark logged-out for THIS request only — never on the shared guard instance.
+        if (expressReq) expressReq[this._cacheKey()] = { user: null, loggedOut: true };
 
         const session = req.session;
         session.forget(this.getName());
 
-        const expressReq = req.getExpressRequest();
         if (expressReq && expressReq.session && typeof expressReq.session.destroy === 'function') {
             await new Promise((resolve) => expressReq.session.destroy(() => resolve()));
         }
@@ -126,23 +147,27 @@ class SessionGuard {
      * @return {Promise<Object|null>}
      */
     async user() {
-        if (this.loggedOut) return null;
+        const expressReq = this._expressReq();
 
-        // 1. Return cached user for this instance (request lifecycle)
-        if (this.userObj) return this.userObj;
+        // 1. Return the cache for THIS request, if we've already resolved it once.
+        const cached = expressReq ? expressReq[this._cacheKey()] : null;
+        if (cached) return cached.loggedOut ? null : cached.user;
 
-        // 2. Try to load from session
+        // 2. Try to load from session (scoped to the current request's cookie/session id).
         const req = request();
         if (!req) return null;
 
         const session = req.session;
         const id = session.get(this.getName());
 
+        let user = null;
         if (id) {
-            this.userObj = await this.provider.find(id);
+            user = await this.provider.find(id);
         }
 
-        return this.userObj;
+        if (expressReq) expressReq[this._cacheKey()] = { user, loggedOut: false };
+
+        return user;
     }
 
     /**
@@ -174,14 +199,14 @@ class SessionGuard {
     }
 
     /**
-     * Set the current user.
+     * Set the current user (scoped to the current request only).
      *
      * @param  {Object}  user
      * @return {this}
      */
     setUser(user) {
-        this.userObj = user;
-        this.loggedOut = false;
+        const expressReq = this._expressReq();
+        if (expressReq) expressReq[this._cacheKey()] = { user, loggedOut: false };
         return this;
     }
 }

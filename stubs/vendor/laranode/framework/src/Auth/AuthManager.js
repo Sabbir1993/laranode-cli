@@ -88,27 +88,42 @@ class AuthManager {
 
     /**
      * Create a token based authentication guard.
+     *
+     * NOTE: this guard object is cached and reused for every request for the
+     * life of the process (see guard() above), so it must never hold
+     * per-request user state on itself — that would leak one caller's
+     * resolved user to every other concurrent API request. State is cached
+     * on the current Express `req` instead, which is fresh per request.
      */
     createApiDriver(name, configData) {
         const provider = this.createUserProvider(configData.provider);
+        const cacheKey = '__auth_' + name;
+        const currentExpressReq = () => {
+            const req = request();
+            return req ? req.getExpressRequest() : null;
+        };
+
         return {
             provider,
-            userObj: null,
 
             check() {
-                return this.userObj !== null;
+                const expressReq = currentExpressReq();
+                return !!(expressReq && expressReq[cacheKey]);
             },
             guest() {
-                return this.userObj === null;
+                return !this.check();
             },
             user() {
-                return this.userObj;
+                const expressReq = currentExpressReq();
+                return (expressReq && expressReq[cacheKey]) || null;
             },
             id() {
-                return this.userObj ? this.userObj.id : null;
+                const user = this.user();
+                return user ? user.id : null;
             },
             setUser(user) {
-                this.userObj = user;
+                const expressReq = currentExpressReq();
+                if (expressReq) expressReq[cacheKey] = user;
                 return this;
             }
         };
